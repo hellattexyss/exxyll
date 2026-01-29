@@ -108,7 +108,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         Icon = "shield",
         Author = "The Strongest Battlegrounds",
         Folder = "CombatGUI",
-        Size = UDim2.fromOffset(520, 600),
+        Size = UDim2.fromOffset(580, 100),
         Transparent = false,
         Theme = "Crimson",
         Resizable = true,
