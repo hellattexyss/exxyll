@@ -1,4 +1,5 @@
 -- Combat GUI v11 - Fixed AutoBlock with Complete Logic
+-- Snippet 1/3: Configuration and Setup
 if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceId == 131048399685555 then
     -- Load WindUI
     local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
@@ -101,35 +102,6 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     -- Initialize config
     ConfigManager:Load()
     
-    -- Custom Theme with Red Toggles
-    local customTheme = {
-        Name = "WaspireTheme",
-        TextColor = Color3.fromRGB(255, 255, 255),
-        MainBackground = Color3.fromRGB(30, 30, 35),
-        SectionBackground = Color3.fromRGB(35, 35, 40),
-        ToggleOn = Color3.fromRGB(220, 60, 60), -- Red color for toggles
-        ToggleOff = Color3.fromRGB(80, 80, 85),
-        ButtonBackground = Color3.fromRGB(45, 45, 50),
-        ButtonHover = Color3.fromRGB(55, 55, 60),
-        SliderBackground = Color3.fromRGB(40, 40, 45),
-        SliderProgress = Color3.fromRGB(220, 60, 60), -- Red color for slider
-        DropdownBackground = Color3.fromRGB(40, 40, 45),
-        DropdownHover = Color3.fromRGB(50, 50, 55),
-        DropdownOpen = Color3.fromRGB(45, 45, 50),
-        NotificationBackground = Color3.fromRGB(30, 30, 35),
-        NotificationTitle = Color3.fromRGB(220, 60, 60),
-        NotificationContent = Color3.fromRGB(200, 200, 200),
-        TabBackground = Color3.fromRGB(35, 35, 40),
-        TabSelected = Color3.fromRGB(220, 60, 60), -- Red color for selected tab
-        IconColor = Color3.fromRGB(220, 60, 60),
-        SectionDivider = Color3.fromRGB(60, 60, 65),
-        TextBoxBackground = Color3.fromRGB(40, 40, 45),
-        TextBoxBorder = Color3.fromRGB(60, 60, 65)
-    }
-    
-    -- Register custom theme
-    WindUI:RegisterTheme(customTheme)
-    
     -- Create WindUI Window with Custom Title
     local Window = WindUI:CreateWindow({
         Title = "Combat UI",
@@ -138,7 +110,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         Folder = "CombatGUI",
         Size = UDim2.fromOffset(420, 500),
         Transparent = false,
-        Theme = "WaspireTheme", -- Use our custom theme
+        Theme = "Dark",
         Resizable = true,
         SideBarWidth = 135,
         HideSearchBar = true,
@@ -146,386 +118,288 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         MinimizeEnabled = true,
         CloseEnabled = true,
     })
-    
-    -- Add version label to window title
-    local function addVersionLabel()
-        task.wait(0.1) -- Wait for window to load
-        local coreGui = game:GetService("CoreGui")
-        local winduiContainer = coreGui:FindFirstChild("WindUI")
-        
-        if winduiContainer then
-            local mainWindow = winduiContainer:FindFirstChild("CombatGUI")
-            if mainWindow then
-                local titleBar = mainWindow:FindFirstChild("TitleBar")
-                if titleBar then
-                    -- Find and modify title label
-                    local titleLabel = titleBar:FindFirstChild("Title", true)
-                    if titleLabel then
-                        titleLabel.Text = "Combat UI"
-                    end
-                    
-                    -- Add version label
-                    local versionLabel = Instance.new("TextLabel")
-                    versionLabel.Name = "VersionLabel"
-                    versionLabel.Text = "v1.0"
-                    versionLabel.TextColor3 = Color3.fromRGB(220, 60, 60)
-                    versionLabel.Font = Enum.Font.GothamBold
-                    versionLabel.TextSize = 12
-                    versionLabel.BackgroundTransparency = 1
-                    versionLabel.Size = UDim2.new(0, 40, 0, 20)
-                    versionLabel.Position = UDim2.new(0, 95, 0, 10)
-                    versionLabel.Parent = titleBar
-                    
-                    -- Add social icons to the right corner
-                    local socialContainer = Instance.new("Frame")
-                    socialContainer.Name = "SocialIcons"
-                    socialContainer.BackgroundTransparency = 1
-                    socialContainer.Size = UDim2.new(0, 70, 0, 30)
-                    socialContainer.Position = UDim2.new(1, -80, 0, 5)
-                    socialContainer.Parent = titleBar
-                    
-                    -- YouTube icon
-                    local youtubeButton = Instance.new("ImageButton")
-                    youtubeButton.Name = "YouTubeIcon"
-                    youtubeButton.Image = "rbxassetid://108320733835485"
-                    youtubeButton.BackgroundTransparency = 1
-                    youtubeButton.Size = UDim2.new(0, 25, 0, 25)
-                    youtubeButton.Position = UDim2.new(0, 0, 0, 2)
-                    youtubeButton.Parent = socialContainer
-                    
-                    -- Discord icon
-                    local discordButton = Instance.new("ImageButton")
-                    discordButton.Name = "DiscordIcon"
-                    discordButton.Image = "rbxassetid://119731774091515"
-                    discordButton.BackgroundTransparency = 1
-                    discordButton.Size = UDim2.new(0, 25, 0, 25)
-                    discordButton.Position = UDim2.new(0, 35, 0, 2)
-                    discordButton.Parent = socialContainer
-                    
-                    -- YouTube click event
-                    youtubeButton.MouseButton1Click:Connect(function()
-                        setclipboard("https://youtube.com/@waspire")
-                        WindUI:Notify({
-                            Title = "YouTube",
-                            Content = "Link copied to clipboard: https://youtube.com/@waspire",
-                            Duration = 3,
-                            Icon = "youtube"
-                        })
-                    end)
-                    
-                    -- Discord click event
-                    discordButton.MouseButton1Click:Connect(function()
-                        setclipboard("https://discord.gg/H2bURQxq3T")
-                        WindUI:Notify({
-                            Title = "Discord",
-                            Content = "Link copied to clipboard: https://discord.gg/H2bURQxq3T",
-                            Duration = 3,
-                            Icon = "message-circle"
-                        })
-                    end)
-                    
-                    -- Add hover effects
-                    youtubeButton.MouseEnter:Connect(function()
-                        youtubeButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
-                    end)
-                    
-                    youtubeButton.MouseLeave:Connect(function()
-                        youtubeButton.ImageColor3 = Color3.fromRGB(200, 200, 200)
-                    end)
-                    
-                    discordButton.MouseEnter:Connect(function()
-                        discordButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
-                    end)
-                    
-                    discordButton.MouseLeave:Connect(function()
-                        discordButton.ImageColor3 = Color3.fromRGB(200, 200, 200)
-                    end)
-                end
-            end
-        end
-    end
+    -- Snippet 2/3: AutoBlock Core Functions
+-- AutoBlock Core Functions
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
-    -- AutoBlock Core Functions
-    local RunService = game:GetService("RunService")
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
+local AutoBlock = {
+    Enabled = false,
+    Blocking = false,
+    Connections = {},
+    CounterNotifierCooldowns = {},
+    CounterHighlights = {}
+}
+
+-- Helper Functions from original script
+function AutoBlock:IsPlayingAnimation(humanoid, animationList)
+    if not humanoid then return false end
+    for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+        if track.Animation and table.find(animationList, track.Animation.AnimationId) then
+            return true
+        end
+    end
+    return false
+end
+
+function AutoBlock:PressBlockKey()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Communicate") then
+        character.Communicate:FireServer(unpack({
+            [1] = {
+                Goal = "KeyPress",
+                Key = Enum.KeyCode.F,
+            },
+        }))
+    end
+end
+
+function AutoBlock:ReleaseBlockKey()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Communicate") then
+        character.Communicate:FireServer(unpack({
+            [1] = {
+                Goal = "KeyRelease",
+                Key = Enum.KeyCode.F,
+            },
+        }))
+    end
+end
+
+function AutoBlock:PressM1()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Communicate") then
+        character.Communicate:FireServer(unpack({
+            [1] = {
+                Goal = "LeftClick",
+                Mobile = true,
+            },
+        }))
+    end
+end
+
+function AutoBlock:ReleaseM1()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Communicate") then
+        character.Communicate:FireServer(unpack({
+            [1] = {
+                Goal = "LeftClickRelease",
+                Mobile = true,
+            },
+        }))
+    end
+end
+
+-- Counter Detection Functions from original script
+function AutoBlock:AddCounterHighlight(character, color)
+    if not self.CounterHighlights[character] then
+        local highlight = Instance.new("Highlight")
+        highlight.FillColor = color
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.Parent = character
+        self.CounterHighlights[character] = highlight
+    end
+end
+
+function AutoBlock:RemoveCounterHighlight(character)
+    local highlight = self.CounterHighlights[character]
+    if highlight then
+        highlight:Destroy()
+        self.CounterHighlights[character] = nil
+    end
+end
+
+function AutoBlock:GetCounterAnimation(humanoid)
+    local whiteCounter = ConfigManager:Get("WhiteCounterAnimation")
+    local blueCounter = ConfigManager:Get("BlueCounterAnimation")
     
-    local AutoBlock = {
-        Enabled = false,
-        Blocking = false,
-        Connections = {},
-        CounterNotifierCooldowns = {},
-        CounterHighlights = {}
-    }
-    
-    -- Helper Functions from original script
-    function AutoBlock:IsPlayingAnimation(humanoid, animationList)
-        if not humanoid then return false end
-        for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-            if track.Animation and table.find(animationList, track.Animation.AnimationId) then
-                return true
+    for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+        if track.Animation then
+            local animId = track.Animation.AnimationId
+            if animId == whiteCounter or animId == blueCounter then
+                return animId
             end
         end
-        return false
     end
+    return nil
+end
+
+function AutoBlock:CheckCounterMoves()
+    if not ConfigManager:Get("CounterNotifierEnabled") then return end
     
-    function AutoBlock:PressBlockKey()
-        local character = LocalPlayer.Character
-        if character and character:FindFirstChild("Communicate") then
-            character.Communicate:FireServer(unpack({
-                [1] = {
-                    Goal = "KeyPress",
-                    Key = Enum.KeyCode.F,
-                },
-            }))
-        end
-    end
+    local character = LocalPlayer.Character
+    if not character then return end
     
-    function AutoBlock:ReleaseBlockKey()
-        local character = LocalPlayer.Character
-        if character and character:FindFirstChild("Communicate") then
-            character.Communicate:FireServer(unpack({
-                [1] = {
-                    Goal = "KeyRelease",
-                    Key = Enum.KeyCode.F,
-                },
-            }))
-        end
-    end
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
     
-    function AutoBlock:PressM1()
-        local character = LocalPlayer.Character
-        if character and character:FindFirstChild("Communicate") then
-            character.Communicate:FireServer(unpack({
-                [1] = {
-                    Goal = "LeftClick",
-                    Mobile = true,
-                },
-            }))
-        end
-    end
+    local counterRange = ConfigManager:Get("CounterRange")
     
-    function AutoBlock:ReleaseM1()
-        local character = LocalPlayer.Character
-        if character and character:FindFirstChild("Communicate") then
-            character.Communicate:FireServer(unpack({
-                [1] = {
-                    Goal = "LeftClickRelease",
-                    Mobile = true,
-                },
-            }))
-        end
-    end
-    
-    -- Counter Detection Functions from original script
-    function AutoBlock:AddCounterHighlight(character, color)
-        if not self.CounterHighlights[character] then
-            local highlight = Instance.new("Highlight")
-            highlight.FillColor = color
-            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-            highlight.FillTransparency = 0.5
-            highlight.OutlineTransparency = 0
-            highlight.Parent = character
-            self.CounterHighlights[character] = highlight
-        end
-    end
-    
-    function AutoBlock:RemoveCounterHighlight(character)
-        local highlight = self.CounterHighlights[character]
-        if highlight then
-            highlight:Destroy()
-            self.CounterHighlights[character] = nil
-        end
-    end
-    
-    function AutoBlock:GetCounterAnimation(humanoid)
-        local whiteCounter = ConfigManager:Get("WhiteCounterAnimation")
-        local blueCounter = ConfigManager:Get("BlueCounterAnimation")
-        
-        for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-            if track.Animation then
-                local animId = track.Animation.AnimationId
-                if animId == whiteCounter or animId == blueCounter then
-                    return animId
-                end
-            end
-        end
-        return nil
-    end
-    
-    function AutoBlock:CheckCounterMoves()
-        if not ConfigManager:Get("CounterNotifierEnabled") then return end
-        
-        local character = LocalPlayer.Character
-        if not character then return end
-        
-        local rootPart = character:FindFirstChild("HumanoidRootPart")
-        if not rootPart then return end
-        
-        local counterRange = ConfigManager:Get("CounterRange")
-        
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                local otherCharacter = player.Character
-                local otherRootPart = otherCharacter:FindFirstChild("HumanoidRootPart")
-                local otherHumanoid = otherCharacter:FindFirstChild("Humanoid")
-                
-                if otherRootPart and otherHumanoid and (rootPart.Position - otherRootPart.Position).Magnitude <= counterRange then
-                    local counterAnimation = self:GetCounterAnimation(otherHumanoid)
-                    if counterAnimation then
-                        local currentTime = tick()
-                        if not self.CounterNotifierCooldowns[player] or 5 < currentTime - self.CounterNotifierCooldowns[player] then
-                            self.CounterNotifierCooldowns[player] = currentTime
-                            local highlightColor = counterAnimation == ConfigManager:Get("WhiteCounterAnimation") and 
-                                Color3.fromRGB(240, 240, 240) or Color3.fromRGB(0, 0, 254)
-                            
-                            self:AddCounterHighlight(otherCharacter, highlightColor)
-                            
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local otherCharacter = player.Character
+            local otherRootPart = otherCharacter:FindFirstChild("HumanoidRootPart")
+            local otherHumanoid = otherCharacter:FindFirstChild("Humanoid")
+            
+            if otherRootPart and otherHumanoid and (rootPart.Position - otherRootPart.Position).Magnitude <= counterRange then
+                local counterAnimation = self:GetCounterAnimation(otherHumanoid)
+                if counterAnimation then
+                    local currentTime = tick()
+                    if not self.CounterNotifierCooldowns[player] or 5 < currentTime - self.CounterNotifierCooldowns[player] then
+                        self.CounterNotifierCooldowns[player] = currentTime
+                        local highlightColor = counterAnimation == ConfigManager:Get("WhiteCounterAnimation") and 
+                            Color3.fromRGB(240, 240, 240) or Color3.fromRGB(0, 0, 254)
+                        
+                        self:AddCounterHighlight(otherCharacter, highlightColor)
+                        
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "Counter Detected!",
+                            Text = player.Name .. " used a counter move",
+                            Duration = 1.2,
+                        })
+                        
+                        task.delay(17.5, function()
+                            self:RemoveCounterHighlight(otherCharacter)
                             game:GetService("StarterGui"):SetCore("SendNotification", {
-                                Title = "Counter Detected!",
-                                Text = player.Name .. " used a counter move",
-                                Duration = 1.2,
+                                Title = "Counter Ended",
+                                Text = player.Name .. "'s counter move cooldown has ended",
+                                Duration = 2,
                             })
-                            
-                            task.delay(17.5, function()
-                                self:RemoveCounterHighlight(otherCharacter)
-                                game:GetService("StarterGui"):SetCore("SendNotification", {
-                                    Title = "Counter Ended",
-                                    Text = player.Name .. "'s counter move cooldown has ended",
-                                    Duration = 2,
-                                })
-                            end)
-                        end
+                        end)
                     end
                 end
             end
         end
     end
+end
+
+-- Main Auto Block Logic
+function AutoBlock:Start()
+    if self.Enabled then return end
     
-    -- Main Auto Block Logic
-    function AutoBlock:Start()
-        if self.Enabled then return end
-        
-        self.Enabled = true
-        self.Blocking = false
-        
-        -- Main Auto Block heartbeat
-        local heartbeatConn = RunService.Heartbeat:Connect(function()
-            if not self.Enabled then return end
-            
-            local closeRange = ConfigManager:Get("AutoBlockCloseRange")
-            local longRange = ConfigManager:Get("AutoBlockLongRange")
-            local closeMoves = ConfigManager:Get("CloseRangeMoves")
-            local longMoves = ConfigManager:Get("LongRangeMoves")
-            
-            local character = LocalPlayer.Character
-            if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-            
-            local characterPos = character.HumanoidRootPart.Position
-            
-            -- Find closest players for both ranges
-            local closestClosePlayer = nil
-            local closestCloseDistance = closeRange
-            local closestLongPlayer = nil
-            local closestLongDistance = longRange
-            
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer then
-                    local otherChar = player.Character
-                    if otherChar and otherChar:FindFirstChild("HumanoidRootPart") and otherChar:FindFirstChild("Humanoid") then
-                        local distance = (characterPos - otherChar.HumanoidRootPart.Position).Magnitude
-                        
-                        if distance <= closeRange and distance < closestCloseDistance then
-                            closestClosePlayer = player
-                            closestCloseDistance = distance
-                        end
-                        
-                        if distance <= longRange and distance < closestLongDistance then
-                            closestLongPlayer = player
-                            closestLongDistance = distance
-                        end
-                    end
-                end
-            end
-            
-            -- Check for long range moves first (from original script logic)
-            if closestLongPlayer and closestLongPlayer.Character and closestLongPlayer.Character:FindFirstChild("Humanoid") then
-                local longHumanoid = closestLongPlayer.Character.Humanoid
-                if self:IsPlayingAnimation(longHumanoid, longMoves) and not self.Blocking then
-                    self.Blocking = true
-                    self:PressBlockKey()
-                    task.wait(0.15)
-                    self.Blocking = false
-                    self:ReleaseBlockKey()
-                end
-            end
-            
-            -- Check for close range moves (with M1 after block option)
-            if closestClosePlayer and closestClosePlayer.Character and closestClosePlayer.Character:FindFirstChild("Humanoid") then
-                local closeHumanoid = closestClosePlayer.Character.Humanoid
-                if self:IsPlayingAnimation(closeHumanoid, closeMoves) and not self.Blocking then
-                    self.Blocking = true
-                    self:PressBlockKey()
-                    task.wait(0.15)
-                    self.Blocking = false
-                    self:ReleaseBlockKey()
-                    
-                    -- M1 after block feature
-                    if ConfigManager:Get("M1AfterBlockEnabled") then
-                        self:PressM1()
-                        task.wait(0.1)
-                        self:ReleaseM1()
-                    end
-                end
-            end
-        end)
-        
-        table.insert(self.Connections, heartbeatConn)
-        
-        -- Counter notifier heartbeat
-        if ConfigManager:Get("CounterNotifierEnabled") then
-            local counterConn = RunService.Heartbeat:Connect(function()
-                self:CheckCounterMoves()
-            end)
-            table.insert(self.Connections, counterConn)
-        end
-    end
+    self.Enabled = true
+    self.Blocking = false
     
-    function AutoBlock:Stop()
+    -- Main Auto Block heartbeat
+    local heartbeatConn = RunService.Heartbeat:Connect(function()
         if not self.Enabled then return end
         
-        self.Enabled = false
+        local closeRange = ConfigManager:Get("AutoBlockCloseRange")
+        local longRange = ConfigManager:Get("AutoBlockLongRange")
+        local closeMoves = ConfigManager:Get("CloseRangeMoves")
+        local longMoves = ConfigManager:Get("LongRangeMoves")
         
-        -- Release block key if holding
-        if self.Blocking then
-            self:ReleaseBlockKey()
-            self.Blocking = false
-        end
+        local character = LocalPlayer.Character
+        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
         
-        -- Clear all highlights
-        for character, highlight in pairs(self.CounterHighlights) do
-            if highlight then
-                highlight:Destroy()
+        local characterPos = character.HumanoidRootPart.Position
+        
+        -- Find closest players for both ranges
+        local closestClosePlayer = nil
+        local closestCloseDistance = closeRange
+        local closestLongPlayer = nil
+        local closestLongDistance = longRange
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local otherChar = player.Character
+                if otherChar and otherChar:FindFirstChild("HumanoidRootPart") and otherChar:FindFirstChild("Humanoid") then
+                    local distance = (characterPos - otherChar.HumanoidRootPart.Position).Magnitude
+                    
+                    if distance <= closeRange and distance < closestCloseDistance then
+                        closestClosePlayer = player
+                        closestCloseDistance = distance
+                    end
+                    
+                    if distance <= longRange and distance < closestLongDistance then
+                        closestLongPlayer = player
+                        closestLongDistance = distance
+                    end
+                end
             end
         end
-        self.CounterHighlights = {}
         
-        -- Disconnect all connections
-        for _, conn in ipairs(self.Connections) do
-            conn:Disconnect()
+        -- Check for long range moves first (from original script logic)
+        if closestLongPlayer and closestLongPlayer.Character and closestLongPlayer.Character:FindFirstChild("Humanoid") then
+            local longHumanoid = closestLongPlayer.Character.Humanoid
+            if self:IsPlayingAnimation(longHumanoid, longMoves) and not self.Blocking then
+                self.Blocking = true
+                self:PressBlockKey()
+                task.wait(0.15)
+                self.Blocking = false
+                self:ReleaseBlockKey()
+            end
         end
-        self.Connections = {}
+        
+        -- Check for close range moves (with M1 after block option)
+        if closestClosePlayer and closestClosePlayer.Character and closestClosePlayer.Character:FindFirstChild("Humanoid") then
+            local closeHumanoid = closestClosePlayer.Character.Humanoid
+            if self:IsPlayingAnimation(closeHumanoid, closeMoves) and not self.Blocking then
+                self.Blocking = true
+                self:PressBlockKey()
+                task.wait(0.15)
+                self.Blocking = false
+                self:ReleaseBlockKey()
+                
+                -- M1 after block feature
+                if ConfigManager:Get("M1AfterBlockEnabled") then
+                    self:PressM1()
+                    task.wait(0.1)
+                    self:ReleaseM1()
+                end
+            end
+        end
+    end)
+    
+    table.insert(self.Connections, heartbeatConn)
+    
+    -- Counter notifier heartbeat
+    if ConfigManager:Get("CounterNotifierEnabled") then
+        local counterConn = RunService.Heartbeat:Connect(function()
+            self:CheckCounterMoves()
+        end)
+        table.insert(self.Connections, counterConn)
+    end
+end
+
+function AutoBlock:Stop()
+    if not self.Enabled then return end
+    
+    self.Enabled = false
+    
+    -- Release block key if holding
+    if self.Blocking then
+        self:ReleaseBlockKey()
+        self.Blocking = false
     end
     
-    function AutoBlock:Toggle()
-        if self.Enabled then
-            self:Stop()
-        else
-            self:Start()
+    -- Clear all highlights
+    for character, highlight in pairs(self.CounterHighlights) do
+        if highlight then
+            highlight:Destroy()
         end
-        return self.Enabled
     end
+    self.CounterHighlights = {}
     
+    -- Disconnect all connections
+    for _, conn in ipairs(self.Connections) do
+        conn:Disconnect()
+    end
+    self.Connections = {}
+end
+
+function AutoBlock:Toggle()
+    if self.Enabled then
+        self:Stop()
+    else
+        self:Start()
+    end
+    return self.Enabled
+    end
+        -- Snippet 3/3: UI and Final Setup
     -- Create Tabs with better styling
     local MainTab = Window:Tab({
         Title = "Main Features",
@@ -809,8 +683,104 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         end
     end)
     
-    -- Add custom UI elements
-    task.spawn(addVersionLabel)
+    -- Add custom UI elements to window
+    local function addCustomUIElements()
+        task.wait(0.5) -- Wait for window to fully load
+        local coreGui = game:GetService("CoreGui")
+        
+        -- Find the WindUI window
+        for _, gui in pairs(coreGui:GetChildren()) do
+            if gui.Name == "WindUI" then
+                local combatGUI = gui:FindFirstChild("CombatGUI")
+                if combatGUI then
+                    local titleBar = combatGUI:FindFirstChild("TitleBar")
+                    if titleBar then
+                        -- Add version label
+                        local versionLabel = Instance.new("TextLabel")
+                        versionLabel.Name = "VersionLabel"
+                        versionLabel.Text = "v1.0"
+                        versionLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+                        versionLabel.Font = Enum.Font.GothamBold
+                        versionLabel.TextSize = 12
+                        versionLabel.BackgroundTransparency = 1
+                        versionLabel.Size = UDim2.new(0, 40, 0, 20)
+                        versionLabel.Position = UDim2.new(0, 95, 0, 10)
+                        versionLabel.Parent = titleBar
+                        
+                        -- Add social icons container
+                        local socialContainer = Instance.new("Frame")
+                        socialContainer.Name = "SocialIcons"
+                        socialContainer.BackgroundTransparency = 1
+                        socialContainer.Size = UDim2.new(0, 70, 0, 30)
+                        socialContainer.Position = UDim2.new(1, -80, 0, 5)
+                        socialContainer.Parent = titleBar
+                        
+                        -- YouTube icon
+                        local youtubeButton = Instance.new("ImageButton")
+                        youtubeButton.Name = "YouTubeIcon"
+                        youtubeButton.Image = "rbxassetid://108320733835485"
+                        youtubeButton.BackgroundTransparency = 1
+                        youtubeButton.Size = UDim2.new(0, 25, 0, 25)
+                        youtubeButton.Position = UDim2.new(0, 0, 0, 2)
+                        youtubeButton.Parent = socialContainer
+                        
+                        -- Discord icon
+                        local discordButton = Instance.new("ImageButton")
+                        discordButton.Name = "DiscordIcon"
+                        discordButton.Image = "rbxassetid://119731774091515"
+                        discordButton.BackgroundTransparency = 1
+                        discordButton.Size = UDim2.new(0, 25, 0, 25)
+                        discordButton.Position = UDim2.new(0, 35, 0, 2)
+                        discordButton.Parent = socialContainer
+                        
+                        -- YouTube click event
+                        youtubeButton.MouseButton1Click:Connect(function()
+                            setclipboard("https://youtube.com/@waspire")
+                            WindUI:Notify({
+                                Title = "YouTube",
+                                Content = "Link copied to clipboard: https://youtube.com/@waspire",
+                                Duration = 3,
+                                Icon = "youtube"
+                            })
+                        end)
+                        
+                        -- Discord click event
+                        discordButton.MouseButton1Click:Connect(function()
+                            setclipboard("https://discord.gg/H2bURQxq3T")
+                            WindUI:Notify({
+                                Title = "Discord",
+                                Content = "Link copied to clipboard: https://discord.gg/H2bURQxq3T",
+                                Duration = 3,
+                                Icon = "message-circle"
+                            })
+                        end)
+                        
+                        -- Add hover effects
+                        youtubeButton.MouseEnter:Connect(function()
+                            youtubeButton.ImageColor3 = Color3.fromRGB(255, 50, 50)
+                        end)
+                        
+                        youtubeButton.MouseLeave:Connect(function()
+                            youtubeButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                        end)
+                        
+                        discordButton.MouseEnter:Connect(function()
+                            discordButton.ImageColor3 = Color3.fromRGB(88, 101, 242)
+                        end)
+                        
+                        discordButton.MouseLeave:Connect(function()
+                            discordButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                        end)
+                        
+                        break
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Call the function to add custom UI
+    task.spawn(addCustomUIElements)
     
     -- Initial notification
     task.wait(0.9)
