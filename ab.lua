@@ -104,13 +104,13 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     
     -- Create WindUI Window with Custom Title
     local Window = WindUI:CreateWindow({
-        Title = "Combat UI",
+        Title = "Combat UI - Waspire",
         Icon = "shield",
         Author = "The Strongest Battlegrounds",
         Folder = "CombatGUI",
-        Size = UDim2.fromOffset(420, 500),
+        Size = UDim2.fromOffset(520, 600),
         Transparent = false,
-        Theme = "Dark",
+        Theme = "Crimson",
         Resizable = true,
         SideBarWidth = 135,
         HideSearchBar = true,
@@ -453,7 +453,7 @@ function AutoBlock:Toggle()
     
     local counterNotifierToggle = MainTab:Toggle({
         Title = "Counter Notifier",
-        Desc = "Highlights enemies when they use counter moves (20 studs range)",
+        Desc = "Highlights enemies when they use counter moves.",
         Value = ConfigManager:Get("CounterNotifierEnabled"),
         Callback = function(state)
             ConfigManager:Set("CounterNotifierEnabled", state)
