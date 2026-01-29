@@ -1,979 +1,832 @@
--- Wind UI with COMPLETE Autoblock System
--- Fixed version with proper Wind UI integration
-
--- Load Wind UI
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/source.lua"))()
-
--- Create Window
-local Window = WindUI:CreateWindow({
-    Title = "Combat System | AutoBlock v11",
-    Icon = "shield",
-    Author = "notpaki",
-    Folder = "CombatSystem",
+-- Combat GUI v11 - Fixed AutoBlock with Complete Logic
+if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceId == 131048399685555 then
+    -- Load WindUI
+    local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
     
-    Size = UDim2.fromOffset(650, 500),
-    Theme = "Dark",
-    Resizable = true,
-    SideBarWidth = 200,
-    HideSearchBar = true,
-    ScrollBarEnabled = true,
-    User = { Enabled = false },
-})
-
-Window:Tag({
-    Title = "v11",
-    Color = Color3.fromHex("#ff6b6b"),
-    Radius = 8,
-})
-
--- COMPLETE AUTOBLOCK MODULE WITH ALL FEATURES
-local AutoBlock = {}
-AutoBlock.__index = AutoBlock
-
--- Configuration with ALL original features
-AutoBlock.Config = {
-    Enabled = false,
-    CloseRange = 14,
-    LongRange = 35,
-    CounterRange = 20,
-    BlockDuration = 0.15,
-    CheckInterval = 0.1,
-    M1AfterBlock = false,
-    CounterDetection = true,
-    DeathCounterDetection = true,
-    CounterBait = false,
-    LEmote = false,
-    AutoCounterM1 = false,
-    M1Reach = false,
-    M1Reset = false,
-    AntiDeathCounter = false,
-    NoStun = false,
-    NoFatigue = false,
-    AntiKnockback = false,
-    ShowCD = false,
-    CounterBaitMessage = "Simon says counter"
-}
-
--- State Management
-AutoBlock.State = {
-    Active = false,
-    Blocking = false,
-    Connections = {},
-    Cooldowns = {},
-    Highlights = {},
-    DeathCounterHighlights = {},
-    Players = game:GetService("Players"),
-    RunService = game:GetService("RunService"),
-    LocalPlayer = game.Players.LocalPlayer,
-    UserInputService = game:GetService("UserInputService"),
-    TweenService = game:GetService("TweenService")
-}
-
--- COMPLETE ANIMATION LISTS FROM ORIGINAL SCRIPT
-AutoBlock.Animations = {
-    CloseRangeMoves = {
-        "rbxassetid://16552234590", "rbxassetid://17889290569", "rbxassetid://17889461810", "rbxassetid://17889458563",
-        "rbxassetid://17889471098", "rbxassetid://16515448089", "rbxassetid://16515520431", "rbxassetid://16515503507",
-        "rbxassetid://15162694192", "rbxassetid://15240176873", "rbxassetid://15240216931", "rbxassetid://15259161390",
-        "rbxassetid://14136436157", "rbxassetid://14001963401", "rbxassetid://13997092940", "rbxassetid://14004222985",
-        "rbxassetid://13378708199", "rbxassetid://13378751717", "rbxassetid://13390230973", "rbxassetid://13295936866",
-        "rbxassetid://13295919399", "rbxassetid://13296577783", "rbxassetid://13491635433", "rbxassetid://13294471966",
-        "rbxassetid://13532604085", "rbxassetid://13532600125", "rbxassetid://13532562418", "rbxassetid://10469643643",
-        "rbxassetid://10469630950", "rbxassetid://10469639222", "rbxassetid://10469493270", "rbxassetid://10479335397",
-        "rbxassetid://17325537719", "rbxassetid://17325522388", "rbxassetid://17325510002", "rbxassetid://17325513870",
-        "rbxassetid://13380255751", "rbxassetid://17857788598", "rbxassetid://17799224866", "rbxassetid://10470104242",
-        "rbxassetid://10503381238", "rbxassetid://17889290569", "rbxassetid://17889471098", "rbxassetid://10479335397",
-        "rbxassetid://18464351556", "rbxassetid://17889461810", "rbxassetid://17889458563", "rbxassetid://10466974800",
-        "rbxassetid://10468665991", "rbxassetid://13380255751", "rbxassetid://12509505723", "rbxassetid://18179181663",
-        "rbxassetid://17857880283", "rbxassetid://12534735382", "rbxassetid://12296882427", "rbxassetid://12272894215",
-        "rbxassetid://15290930205", "rbxassetid://16431491215", "rbxassetid://16515850153", "rbxassetid://16139402582",
-        "rbxassetid://13362587853", "rbxassetid://16139108718", "rbxassetid://14046756619", "rbxassetid://134775406437626",
-        "rbxassetid://104895379416342", "rbxassetid://100059874351664", "rbxassetid://123005629431309",
-        "rbxassetid://98542310119798", "rbxassetid://77509627104305", "rbxassetid://113166426814229",
-        "rbxassetid://13376869471", "rbxassetid://15295895753", "rbxassetid://13370310513", "rbxassetid://125955606488863"
-    },
+    -- Create configuration manager
+    local ConfigManager = {}
+    local configFile = "CombatGUI_Config.json"
     
-    LongRangeMoves = {
-        "rbxassetid://10479335397", "rbxassetid://10468665991", "rbxassetid://12684185971", "rbxassetid://12509505723",
-        "rbxassetid://12684390285", "rbxassetid://17275150809", "rbxassetid://131820095363270", "rbxassetid://13362587853",
-        "rbxassetid://14046756619", "rbxassetid://15295895753", "rbxassetid://15290930205", "rbxassetid://13380255751"
-    },
+    -- Default configuration
+    local defaultConfig = {
+        AutoBlockEnabled = false,
+        AutoBlockCloseRange = 14,
+        AutoBlockLongRange = 35,
+        CounterNotifierEnabled = false,
+        CounterRange = 20, -- Hardcoded for counter detection
+        M1AfterBlockEnabled = false,
+        CloseRangeMoves = {
+            "rbxassetid://16552234590", "rbxassetid://17889290569", "rbxassetid://17889461810", "rbxassetid://17889458563",
+            "rbxassetid://17889471098", "rbxassetid://16515448089", "rbxassetid://16515520431", "rbxassetid://16515503507",
+            "rbxassetid://15162694192", "rbxassetid://15240176873", "rbxassetid://15240216931", "rbxassetid://15259161390",
+            "rbxassetid://14136436157", "rbxassetid://14001963401", "rbxassetid://13997092940", "rbxassetid://14004222985",
+            "rbxassetid://13378708199", "rbxassetid://13378751717", "rbxassetid://13390230973", "rbxassetid://13295936866",
+            "rbxassetid://13295919399", "rbxassetid://13296577783", "rbxassetid://13491635433", "rbxassetid://13294471966",
+            "rbxassetid://13532604085", "rbxassetid://13532600125", "rbxassetid://13532562418", "rbxassetid://10469643643",
+            "rbxassetid://10469630950", "rbxassetid://10469639222", "rbxassetid://10469493270", "rbxassetid://10479335397",
+            "rbxassetid://17325537719", "rbxassetid://17325522388", "rbxassetid://17325510002", "rbxassetid://17325513870",
+            "rbxassetid://13380255751", "rbxassetid://17857788598", "rbxassetid://17799224866", "rbxassetid://10470104242",
+            "rbxassetid://10503381238", "rbxassetid://17889290569", "rbxassetid://17889471098", "rbxassetid://10479335397",
+            "rbxassetid://18464351556", "rbxassetid://17889461810", "rbxassetid://17889458563", "rbxassetid://10466974800",
+            "rbxassetid://10468665991", "rbxassetid://13380255751", "rbxassetid://12509505723", "rbxassetid://18179181663",
+            "rbxassetid://17857880283", "rbxassetid://12534735382", "rbxassetid://12296882427", "rbxassetid://12272894215",
+            "rbxassetid://15290930205", "rbxassetid://16431491215", "rbxassetid://16515850153", "rbxassetid://16139402582",
+            "rbxassetid://13362587853", "rbxassetid://16139108718", "rbxassetid://14046756619", "rbxassetid://134775406437626",
+            "rbxassetid://104895379416342", "rbxassetid://100059874351664", "rbxassetid://123005629431309",
+            "rbxassetid://98542310119798", "rbxassetid://77509627104305", "rbxassetid://113166426814229",
+            "rbxassetid://13376869471", "rbxassetid://15295895753", "rbxassetid://13370310513", "rbxassetid://125955606488863"
+        },
+        LongRangeMoves = {
+            "rbxassetid://10479335397", "rbxassetid://10468665991", "rbxassetid://12684185971", "rbxassetid://12509505723",
+            "rbxassetid://12684390285", "rbxassetid://17275150809", "rbxassetid://131820095363270", "rbxassetid://13362587853",
+            "rbxassetid://14046756619", "rbxassetid://15295895753", "rbxassetid://15290930205", "rbxassetid://13380255751"
+        },
+        CounterMoves = {
+            "rbxassetid://10469493270", "rbxassetid://10469630950", "rbxassetid://10469639222", "rbxassetid://10469643643",
+            "rbxassetid://13532562418", "rbxassetid://13532600125", "rbxassetid://13532604085", "rbxassetid://13294471966",
+            "rbxassetid://13491635433", "rbxassetid://13296577783", "rbxassetid://13295919399", "rbxassetid://13295936866",
+            "rbxassetid://13370310513", "rbxassetid://13390230973", "rbxassetid://13378751717", "rbxassetid://13378708199",
+            "rbxassetid://14004222985", "rbxassetid://13997092940", "rbxassetid://14001963401", "rbxassetid://14136436157",
+            "rbxassetid://15259161390", "rbxassetid://15240216931", "rbxassetid://15240176873", "rbxassetid://15162694192",
+            "rbxassetid://16515503507", "rbxassetid://16515520431", "rbxassetid://16515448089", "rbxassetid://16552234590",
+            "rbxassetid://17889458563", "rbxassetid://17889461810", "rbxassetid://17889471098", "rbxassetid://17889290569",
+            "rbxassetid://123005629431309", "rbxassetid://100059874351664", "rbxassetid://104895379416342", "rbxassetid://134775406437626"
+        },
+        WhiteCounterAnimation = "rbxassetid://15311685628",
+        BlueCounterAnimation = "rbxassetid://12351854556"
+    }
     
-    CounterMoves = {
-        "rbxassetid://10469493270", "rbxassetid://10469630950", "rbxassetid://10469639222", "rbxassetid://10469643643",
-        "rbxassetid://13532562418", "rbxassetid://13532600125", "rbxassetid://13532604085", "rbxassetid://13294471966",
-        "rbxassetid://13491635433", "rbxassetid://13296577783", "rbxassetid://13295919399", "rbxassetid://13295936866",
-        "rbxassetid://13370310513", "rbxassetid://13390230973", "rbxassetid://13378751717", "rbxassetid://13378708199",
-        "rbxassetid://14004222985", "rbxassetid://13997092940", "rbxassetid://14001963401", "rbxassetid://14136436157",
-        "rbxassetid://15259161390", "rbxassetid://15240216931", "rbxassetid://15240176873", "rbxassetid://15162694192",
-        "rbxassetid://16515503507", "rbxassetid://16515520431", "rbxassetid://16515448089", "rbxassetid://16552234590",
-        "rbxassetid://17889458563", "rbxassetid://17889461810", "rbxassetid://17889471098", "rbxassetid://17889290569",
-        "rbxassetid://123005629431309", "rbxassetid://100059874351664", "rbxassetid://104895379416342", "rbxassetid://134775406437626"
-    },
+    -- Current configuration
+    local currentConfig = {}
     
-    WhiteCounter = "rbxassetid://15311685628",
-    BlueCounter = "rbxassetid://12351854556",
-    DeathCounter = "rbxassetid://11343250001",
-    LAnimation = "rbxassetid://18614546390"
-}
-
--- Helper Functions
-function AutoBlock:IsPlayingAnimation(humanoid, animationList)
-    if not humanoid or not animationList then return false end
-    for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-        if track.Animation and table.find(animationList, track.Animation.AnimationId) then
-            return true
+    -- Load configuration
+    function ConfigManager:Load()
+        if isfile(configFile) then
+            local success, data = pcall(function()
+                return game:GetService("HttpService"):JSONDecode(readfile(configFile))
+            end)
+            if success then
+                for key, value in pairs(data) do
+                    currentConfig[key] = value
+                end
+                return true
+            end
+        end
+        -- Load defaults
+        for key, value in pairs(defaultConfig) do
+            currentConfig[key] = value
+        end
+        return false
+    end
+    
+    -- Save configuration
+    function ConfigManager:Save()
+        local success = pcall(function()
+            writefile(configFile, game:GetService("HttpService"):JSONEncode(currentConfig))
+        end)
+        return success
+    end
+    
+    -- Get configuration value
+    function ConfigManager:Get(key)
+        return currentConfig[key] or defaultConfig[key]
+    end
+    
+    -- Set configuration value
+    function ConfigManager:Set(key, value)
+        currentConfig[key] = value
+        self:Save()
+    end
+    
+    -- Initialize config
+    ConfigManager:Load()
+    
+    -- Custom Theme with Red Toggles
+    local customTheme = {
+        Name = "WaspireTheme",
+        TextColor = Color3.fromRGB(255, 255, 255),
+        MainBackground = Color3.fromRGB(30, 30, 35),
+        SectionBackground = Color3.fromRGB(35, 35, 40),
+        ToggleOn = Color3.fromRGB(220, 60, 60), -- Red color for toggles
+        ToggleOff = Color3.fromRGB(80, 80, 85),
+        ButtonBackground = Color3.fromRGB(45, 45, 50),
+        ButtonHover = Color3.fromRGB(55, 55, 60),
+        SliderBackground = Color3.fromRGB(40, 40, 45),
+        SliderProgress = Color3.fromRGB(220, 60, 60), -- Red color for slider
+        DropdownBackground = Color3.fromRGB(40, 40, 45),
+        DropdownHover = Color3.fromRGB(50, 50, 55),
+        DropdownOpen = Color3.fromRGB(45, 45, 50),
+        NotificationBackground = Color3.fromRGB(30, 30, 35),
+        NotificationTitle = Color3.fromRGB(220, 60, 60),
+        NotificationContent = Color3.fromRGB(200, 200, 200),
+        TabBackground = Color3.fromRGB(35, 35, 40),
+        TabSelected = Color3.fromRGB(220, 60, 60), -- Red color for selected tab
+        IconColor = Color3.fromRGB(220, 60, 60),
+        SectionDivider = Color3.fromRGB(60, 60, 65),
+        TextBoxBackground = Color3.fromRGB(40, 40, 45),
+        TextBoxBorder = Color3.fromRGB(60, 60, 65)
+    }
+    
+    -- Register custom theme
+    WindUI:RegisterTheme(customTheme)
+    
+    -- Create WindUI Window with Custom Title
+    local Window = WindUI:CreateWindow({
+        Title = "Combat UI",
+        Icon = "shield",
+        Author = "The Strongest Battlegrounds",
+        Folder = "CombatGUI",
+        Size = UDim2.fromOffset(420, 500),
+        Transparent = false,
+        Theme = "WaspireTheme", -- Use our custom theme
+        Resizable = true,
+        SideBarWidth = 135,
+        HideSearchBar = true,
+        ScrollBarEnabled = true,
+        MinimizeEnabled = true,
+        CloseEnabled = true,
+    })
+    
+    -- Add version label to window title
+    local function addVersionLabel()
+        task.wait(0.1) -- Wait for window to load
+        local coreGui = game:GetService("CoreGui")
+        local winduiContainer = coreGui:FindFirstChild("WindUI")
+        
+        if winduiContainer then
+            local mainWindow = winduiContainer:FindFirstChild("CombatGUI")
+            if mainWindow then
+                local titleBar = mainWindow:FindFirstChild("TitleBar")
+                if titleBar then
+                    -- Find and modify title label
+                    local titleLabel = titleBar:FindFirstChild("Title", true)
+                    if titleLabel then
+                        titleLabel.Text = "Combat UI"
+                    end
+                    
+                    -- Add version label
+                    local versionLabel = Instance.new("TextLabel")
+                    versionLabel.Name = "VersionLabel"
+                    versionLabel.Text = "v1.0"
+                    versionLabel.TextColor3 = Color3.fromRGB(220, 60, 60)
+                    versionLabel.Font = Enum.Font.GothamBold
+                    versionLabel.TextSize = 12
+                    versionLabel.BackgroundTransparency = 1
+                    versionLabel.Size = UDim2.new(0, 40, 0, 20)
+                    versionLabel.Position = UDim2.new(0, 95, 0, 10)
+                    versionLabel.Parent = titleBar
+                    
+                    -- Add social icons to the right corner
+                    local socialContainer = Instance.new("Frame")
+                    socialContainer.Name = "SocialIcons"
+                    socialContainer.BackgroundTransparency = 1
+                    socialContainer.Size = UDim2.new(0, 70, 0, 30)
+                    socialContainer.Position = UDim2.new(1, -80, 0, 5)
+                    socialContainer.Parent = titleBar
+                    
+                    -- YouTube icon
+                    local youtubeButton = Instance.new("ImageButton")
+                    youtubeButton.Name = "YouTubeIcon"
+                    youtubeButton.Image = "rbxassetid://108320733835485"
+                    youtubeButton.BackgroundTransparency = 1
+                    youtubeButton.Size = UDim2.new(0, 25, 0, 25)
+                    youtubeButton.Position = UDim2.new(0, 0, 0, 2)
+                    youtubeButton.Parent = socialContainer
+                    
+                    -- Discord icon
+                    local discordButton = Instance.new("ImageButton")
+                    discordButton.Name = "DiscordIcon"
+                    discordButton.Image = "rbxassetid://119731774091515"
+                    discordButton.BackgroundTransparency = 1
+                    discordButton.Size = UDim2.new(0, 25, 0, 25)
+                    discordButton.Position = UDim2.new(0, 35, 0, 2)
+                    discordButton.Parent = socialContainer
+                    
+                    -- YouTube click event
+                    youtubeButton.MouseButton1Click:Connect(function()
+                        setclipboard("https://youtube.com/@waspire")
+                        WindUI:Notify({
+                            Title = "YouTube",
+                            Content = "Link copied to clipboard: https://youtube.com/@waspire",
+                            Duration = 3,
+                            Icon = "youtube"
+                        })
+                    end)
+                    
+                    -- Discord click event
+                    discordButton.MouseButton1Click:Connect(function()
+                        setclipboard("https://discord.gg/H2bURQxq3T")
+                        WindUI:Notify({
+                            Title = "Discord",
+                            Content = "Link copied to clipboard: https://discord.gg/H2bURQxq3T",
+                            Duration = 3,
+                            Icon = "message-circle"
+                        })
+                    end)
+                    
+                    -- Add hover effects
+                    youtubeButton.MouseEnter:Connect(function()
+                        youtubeButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                    end)
+                    
+                    youtubeButton.MouseLeave:Connect(function()
+                        youtubeButton.ImageColor3 = Color3.fromRGB(200, 200, 200)
+                    end)
+                    
+                    discordButton.MouseEnter:Connect(function()
+                        discordButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                    end)
+                    
+                    discordButton.MouseLeave:Connect(function()
+                        discordButton.ImageColor3 = Color3.fromRGB(200, 200, 200)
+                    end)
+                end
+            end
         end
     end
-    return false
-end
 
-function AutoBlock:IsPlayingAnimationId(humanoid, animationId)
-    if not humanoid or not animationId then return false end
-    for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-        if track.Animation and track.Animation.AnimationId == animationId then
-            return true
+    -- AutoBlock Core Functions
+    local RunService = game:GetService("RunService")
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    
+    local AutoBlock = {
+        Enabled = false,
+        Blocking = false,
+        Connections = {},
+        CounterNotifierCooldowns = {},
+        CounterHighlights = {}
+    }
+    
+    -- Helper Functions from original script
+    function AutoBlock:IsPlayingAnimation(humanoid, animationList)
+        if not humanoid then return false end
+        for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+            if track.Animation and table.find(animationList, track.Animation.AnimationId) then
+                return true
+            end
         end
+        return false
     end
-    return false
-end
-
-function AutoBlock:PressBlockKey()
-    local char = self.State.LocalPlayer.Character
-    if char and char:FindFirstChild("Communicate") then
-        pcall(function()
-            char.Communicate:FireServer({
+    
+    function AutoBlock:PressBlockKey()
+        local character = LocalPlayer.Character
+        if character and character:FindFirstChild("Communicate") then
+            character.Communicate:FireServer(unpack({
                 [1] = {
                     Goal = "KeyPress",
                     Key = Enum.KeyCode.F,
-                }
-            })
-        end)
+                },
+            }))
+        end
     end
-end
-
-function AutoBlock:ReleaseBlockKey()
-    local char = self.State.LocalPlayer.Character
-    if char and char:FindFirstChild("Communicate") then
-        pcall(function()
-            char.Communicate:FireServer({
+    
+    function AutoBlock:ReleaseBlockKey()
+        local character = LocalPlayer.Character
+        if character and character:FindFirstChild("Communicate") then
+            character.Communicate:FireServer(unpack({
                 [1] = {
                     Goal = "KeyRelease",
                     Key = Enum.KeyCode.F,
-                }
-            })
-        end)
+                },
+            }))
+        end
     end
-end
-
-function AutoBlock:PressM1()
-    local char = self.State.LocalPlayer.Character
-    if char and char:FindFirstChild("Communicate") then
-        pcall(function()
-            char.Communicate:FireServer({
+    
+    function AutoBlock:PressM1()
+        local character = LocalPlayer.Character
+        if character and character:FindFirstChild("Communicate") then
+            character.Communicate:FireServer(unpack({
                 [1] = {
                     Goal = "LeftClick",
                     Mobile = true,
-                }
-            })
-        end)
+                },
+            }))
+        end
     end
-end
-
-function AutoBlock:ReleaseM1()
-    local char = self.State.LocalPlayer.Character
-    if char and char:FindFirstChild("Communicate") then
-        pcall(function()
-            char.Communicate:FireServer({
+    
+    function AutoBlock:ReleaseM1()
+        local character = LocalPlayer.Character
+        if character and character:FindFirstChild("Communicate") then
+            character.Communicate:FireServer(unpack({
                 [1] = {
                     Goal = "LeftClickRelease",
                     Mobile = true,
-                }
-            })
-        end)
+                },
+            }))
+        end
     end
-end
-
--- Find targets in range
-function AutoBlock:FindTargetsInRange(range)
-    local character = self.State.LocalPlayer.Character
-    if not character then return {} end
     
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return {} end
+    -- Counter Detection Functions from original script
+    function AutoBlock:AddCounterHighlight(character, color)
+        if not self.CounterHighlights[character] then
+            local highlight = Instance.new("Highlight")
+            highlight.FillColor = color
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.FillTransparency = 0.5
+            highlight.OutlineTransparency = 0
+            highlight.Parent = character
+            self.CounterHighlights[character] = highlight
+        end
+    end
     
-    local characterPos = humanoidRootPart.Position
-    local targets = {}
+    function AutoBlock:RemoveCounterHighlight(character)
+        local highlight = self.CounterHighlights[character]
+        if highlight then
+            highlight:Destroy()
+            self.CounterHighlights[character] = nil
+        end
+    end
     
-    for _, player in ipairs(self.State.Players:GetPlayers()) do
-        if player ~= self.State.LocalPlayer and player.Character then
-            local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
-            local targetHumanoid = player.Character:FindFirstChild("Humanoid")
-            
-            if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
-                local distance = (characterPos - targetRoot.Position).Magnitude
-                if distance <= range then
-                    table.insert(targets, {
-                        Player = player,
-                        Distance = distance,
-                        Character = player.Character,
-                        Humanoid = targetHumanoid
-                    })
+    function AutoBlock:GetCounterAnimation(humanoid)
+        local whiteCounter = ConfigManager:Get("WhiteCounterAnimation")
+        local blueCounter = ConfigManager:Get("BlueCounterAnimation")
+        
+        for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+            if track.Animation then
+                local animId = track.Animation.AnimationId
+                if animId == whiteCounter or animId == blueCounter then
+                    return animId
                 end
             end
         end
+        return nil
     end
     
-    -- Sort by distance
-    table.sort(targets, function(a, b) return a.Distance < b.Distance end)
-    return targets
-end
-
--- Check for counter tools
-function AutoBlock:HasCounterTool()
-    local backpack = self.State.LocalPlayer:FindFirstChild("Backpack")
-    if not backpack then return false end
-    
-    for _, tool in ipairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") and (tool.Name == "Prey's Peril" or tool.Name == "Split Second Counter") then
-            return true
-        end
-    end
-    return false
-end
-
--- Core Autoblock Logic
-function AutoBlock:CheckAndBlock()
-    if not self.Config.Enabled or self.State.Blocking then return end
-    
-    local character = self.State.LocalPlayer.Character
-    if not character then return end
-    
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return end
-    
-    -- Check long range moves first
-    local longTargets = self:FindTargetsInRange(self.Config.LongRange)
-    for _, target in ipairs(longTargets) do
-        if target.Humanoid and self:IsPlayingAnimation(target.Humanoid, self.Animations.LongRangeMoves) then
-            self:ExecuteBlock()
-            return
-        end
-    end
-    
-    -- Check close range moves
-    local closeTargets = self:FindTargetsInRange(self.Config.CloseRange)
-    for _, target in ipairs(closeTargets) do
-        if target.Humanoid and self:IsPlayingAnimation(target.Humanoid, self.Animations.CloseRangeMoves) then
-            self:ExecuteBlock()
-            
-            -- M1 after block
-            if self.Config.M1AfterBlock then
-                task.wait(0.1)
-                self:PressM1()
-                task.wait(0.05)
-                self:ReleaseM1()
-            end
-            return
-        end
-    end
-end
-
-function AutoBlock:ExecuteBlock()
-    self.State.Blocking = true
-    self:PressBlockKey()
-    
-    task.wait(self.Config.BlockDuration)
-    
-    self:ReleaseBlockKey()
-    self.State.Blocking = false
-end
-
--- Counter Detection
-function AutoBlock:CheckCounterMoves()
-    if not self.Config.CounterDetection then return end
-    
-    local character = self.State.LocalPlayer.Character
-    if not character then return end
-    
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-    
-    for _, player in ipairs(self.State.Players:GetPlayers()) do
-        if player ~= self.State.LocalPlayer and player.Character then
-            local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
-            local targetHumanoid = player.Character:FindFirstChild("Humanoid")
-            
-            if targetRoot and targetHumanoid then
-                local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                if distance <= self.Config.CounterRange then
-                    if self:IsPlayingAnimationId(targetHumanoid, self.Animations.WhiteCounter) or
-                       self:IsPlayingAnimationId(targetHumanoid, self.Animations.BlueCounter) then
-                        
+    function AutoBlock:CheckCounterMoves()
+        if not ConfigManager:Get("CounterNotifierEnabled") then return end
+        
+        local character = LocalPlayer.Character
+        if not character then return end
+        
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not rootPart then return end
+        
+        local counterRange = ConfigManager:Get("CounterRange")
+        
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local otherCharacter = player.Character
+                local otherRootPart = otherCharacter:FindFirstChild("HumanoidRootPart")
+                local otherHumanoid = otherCharacter:FindFirstChild("Humanoid")
+                
+                if otherRootPart and otherHumanoid and (rootPart.Position - otherRootPart.Position).Magnitude <= counterRange then
+                    local counterAnimation = self:GetCounterAnimation(otherHumanoid)
+                    if counterAnimation then
                         local currentTime = tick()
-                        if not self.State.Cooldowns[player] or (currentTime - self.State.Cooldowns[player]) > 5 then
-                            self.State.Cooldowns[player] = currentTime
+                        if not self.CounterNotifierCooldowns[player] or 5 < currentTime - self.CounterNotifierCooldowns[player] then
+                            self.CounterNotifierCooldowns[player] = currentTime
+                            local highlightColor = counterAnimation == ConfigManager:Get("WhiteCounterAnimation") and 
+                                Color3.fromRGB(240, 240, 240) or Color3.fromRGB(0, 0, 254)
                             
-                            -- Add highlight
-                            if not self.State.Highlights[player.Character] then
-                                local highlight = Instance.new("Highlight")
-                                highlight.FillColor = Color3.fromRGB(240, 240, 240)
-                                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                highlight.FillTransparency = 0.5
-                                highlight.Parent = player.Character
-                                self.State.Highlights[player.Character] = highlight
-                                
-                                WindUI:Notify({
-                                    Title = "Counter Detection",
-                                    Description = player.Name .. " used a counter move",
-                                    Duration = 1.5
+                            self:AddCounterHighlight(otherCharacter, highlightColor)
+                            
+                            game:GetService("StarterGui"):SetCore("SendNotification", {
+                                Title = "Counter Detected!",
+                                Text = player.Name .. " used a counter move",
+                                Duration = 1.2,
+                            })
+                            
+                            task.delay(17.5, function()
+                                self:RemoveCounterHighlight(otherCharacter)
+                                game:GetService("StarterGui"):SetCore("SendNotification", {
+                                    Title = "Counter Ended",
+                                    Text = player.Name .. "'s counter move cooldown has ended",
+                                    Duration = 2,
                                 })
-                                
-                                -- Remove highlight after 17.5 seconds
-                                task.delay(17.5, function()
-                                    if self.State.Highlights[player.Character] then
-                                        self.State.Highlights[player.Character]:Destroy()
-                                        self.State.Highlights[player.Character] = nil
-                                    end
-                                end)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
--- Death Counter Detection
-function AutoBlock:CheckDeathCounters()
-    if not self.Config.DeathCounterDetection then return end
-    
-    local liveFolder = workspace:FindFirstChild("Live")
-    if not liveFolder then return end
-    
-    for _, character in ipairs(liveFolder:GetChildren()) do
-        if game.Players:FindFirstChild(character.Name) then
-            for _, accessory in ipairs(character:GetDescendants()) do
-                if accessory:IsA("Accessory") and accessory.Name == "Counter" then
-                    if not self.State.DeathCounterHighlights[character] then
-                        local highlight = Instance.new("Highlight")
-                        highlight.FillColor = Color3.fromRGB(255, 0, 0)
-                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                        highlight.FillTransparency = 0.5
-                        highlight.Parent = character
-                        self.State.DeathCounterHighlights[character] = highlight
-                        
-                        WindUI:Notify({
-                            Title = "Death Counter",
-                            Description = character.Name .. " used Death Counter",
-                            Duration = 2
-                        })
-                        
-                        task.delay(10.1, function()
-                            if self.State.DeathCounterHighlights[character] then
-                                self.State.DeathCounterHighlights[character]:Destroy()
-                                self.State.DeathCounterHighlights[character] = nil
-                            end
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-
--- Counter Bait System
-function AutoBlock:CheckCounterBait()
-    if not self.Config.CounterBait then return end
-    
-    local character = self.State.LocalPlayer.Character
-    if not character then return end
-    
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-    
-    for _, player in ipairs(self.State.Players:GetPlayers()) do
-        if player ~= self.State.LocalPlayer and player.Character then
-            local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
-            local targetHumanoid = player.Character:FindFirstChild("Humanoid")
-            
-            if targetRoot and targetHumanoid then
-                local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                if distance <= self.Config.CounterRange then
-                    if self:IsPlayingAnimationId(targetHumanoid, self.Animations.WhiteCounter) or
-                       self:IsPlayingAnimationId(targetHumanoid, self.Animations.BlueCounter) then
-                        
-                        -- Send bait message
-                        if game:GetService("TextChatService") then
-                            pcall(function()
-                                game:GetService("TextChatService").TextChannels.RBXGeneral:SendAsync(self.Config.CounterBaitMessage)
                             end)
                         end
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Main Auto Block Logic
+    function AutoBlock:Start()
+        if self.Enabled then return end
+        
+        self.Enabled = true
+        self.Blocking = false
+        
+        -- Main Auto Block heartbeat
+        local heartbeatConn = RunService.Heartbeat:Connect(function()
+            if not self.Enabled then return end
+            
+            local closeRange = ConfigManager:Get("AutoBlockCloseRange")
+            local longRange = ConfigManager:Get("AutoBlockLongRange")
+            local closeMoves = ConfigManager:Get("CloseRangeMoves")
+            local longMoves = ConfigManager:Get("LongRangeMoves")
+            
+            local character = LocalPlayer.Character
+            if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+            
+            local characterPos = character.HumanoidRootPart.Position
+            
+            -- Find closest players for both ranges
+            local closestClosePlayer = nil
+            local closestCloseDistance = closeRange
+            local closestLongPlayer = nil
+            local closestLongDistance = longRange
+            
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    local otherChar = player.Character
+                    if otherChar and otherChar:FindFirstChild("HumanoidRootPart") and otherChar:FindFirstChild("Humanoid") then
+                        local distance = (characterPos - otherChar.HumanoidRootPart.Position).Magnitude
                         
-                        -- Play L emote
-                        if self.Config.LEmote then
-                            local animator = character:FindFirstChild("Humanoid"):FindFirstChild("Animator")
-                            if animator then
-                                local animation = Instance.new("Animation")
-                                animation.AnimationId = self.Animations.LAnimation
-                                local track = animator:LoadAnimation(animation)
-                                track:Play()
-                                task.wait(1)
-                                track:Stop()
-                            end
+                        if distance <= closeRange and distance < closestCloseDistance then
+                            closestClosePlayer = player
+                            closestCloseDistance = distance
                         end
                         
-                        return
-                    end
-                end
-            end
-        end
-    end
-end
-
--- No Stun System
-function AutoBlock:RemoveStuns()
-    if not self.Config.NoStun then return end
-    
-    local liveFolder = workspace:FindFirstChild("Live")
-    if not liveFolder then return end
-    
-    for _, player in ipairs(self.State.Players:GetPlayers()) do
-        local character = liveFolder:FindFirstChild(player.Name)
-        if character then
-            for _, accessory in ipairs(character:GetChildren()) do
-                if accessory:IsA("Accessory") then
-                    local stunNames = {"Slowed", "Freeze", "NoDash", "NoBlock", "NoPunch", "NoJump", "ComboStun"}
-                    if table.find(stunNames, accessory.Name) then
-                        accessory:Destroy()
-                    end
-                end
-            end
-        end
-    end
-end
-
--- No Fatigue System
-function AutoBlock:HandleNoFatigue()
-    if not self.Config.NoFatigue then return end
-    
-    local character = self.State.LocalPlayer.Character
-    if not character then return end
-    
-    local humanoid = character:FindFirstChild("Humanoid")
-    if humanoid and humanoid.JumpPower < 50 then
-        humanoid.JumpPower = 48.5
-    end
-end
-
--- Anti Knockback
-function AutoBlock:RemoveKnockback()
-    if not self.Config.AntiKnockback then return end
-    
-    local liveFolder = workspace:FindFirstChild("Live")
-    if not liveFolder then return end
-    
-    for _, player in ipairs(self.State.Players:GetPlayers()) do
-        local character = liveFolder:FindFirstChild(player.Name)
-        if character then
-            for _, accessory in ipairs(character:GetChildren()) do
-                if accessory:IsA("Accessory") and (accessory.Name == "Ragdoll" or accessory.Name == "RagdollSim") then
-                    accessory:Destroy()
-                end
-            end
-        end
-    end
-end
-
--- M1 Reach System
-function AutoBlock:HandleM1Reach()
-    if not self.Config.M1Reach then return end
-    
-    local character = self.State.LocalPlayer.Character
-    if not character then return end
-    
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character:FindFirstChild("Humanoid")
-    if not rootPart or not humanoid then return end
-    
-    local m1ReachMoves = {
-        "rbxassetid://10469493270", "rbxassetid://10469630950", "rbxassetid://13532562418",
-        "rbxassetid://13532600125", "rbxassetid://13491635433", "rbxassetid://13296577783",
-        "rbxassetid://13370310513", "rbxassetid://13390230973", "rbxassetid://14004222985",
-        "rbxassetid://13997092940", "rbxassetid://15259161390", "rbxassetid://15240216931",
-        "rbxassetid://16515503507", "rbxassetid://16515520431", "rbxassetid://17889458563",
-        "rbxassetid://17889461810", "rbxassetid://123005629431309", "rbxassetid://100059874351664"
-    }
-    
-    for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-        if track.Animation and table.find(m1ReachMoves, track.Animation.AnimationId) then
-            -- Find closest target
-            local closestTarget = nil
-            local closestDistance = 16
-            
-            for _, player in ipairs(self.State.Players:GetPlayers()) do
-                if player ~= self.State.LocalPlayer and player.Character then
-                    local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
-                    if targetRoot then
-                        local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                        if distance <= 16 and distance < closestDistance then
-                            closestDistance = distance
-                            closestTarget = targetRoot
+                        if distance <= longRange and distance < closestLongDistance then
+                            closestLongPlayer = player
+                            closestLongDistance = distance
                         end
                     end
                 end
             end
             
-            if closestTarget then
-                local lookVector = closestTarget.CFrame.LookVector
-                local dotProduct = lookVector:Dot((rootPart.Position - closestTarget.Position).unit)
-                local offset = dotProduct > 0 and 0.3 or -0.3
-                local newCFrame = CFrame.lookAt(closestTarget.Position + lookVector * offset, closestTarget.Position)
-                
-                self.State.TweenService:Create(rootPart, TweenInfo.new(0.09), {
-                    CFrame = newCFrame
-                }):Play()
+            -- Check for long range moves first (from original script logic)
+            if closestLongPlayer and closestLongPlayer.Character and closestLongPlayer.Character:FindFirstChild("Humanoid") then
+                local longHumanoid = closestLongPlayer.Character.Humanoid
+                if self:IsPlayingAnimation(longHumanoid, longMoves) and not self.Blocking then
+                    self.Blocking = true
+                    self:PressBlockKey()
+                    task.wait(0.15)
+                    self.Blocking = false
+                    self:ReleaseBlockKey()
+                end
             end
-            break
+            
+            -- Check for close range moves (with M1 after block option)
+            if closestClosePlayer and closestClosePlayer.Character and closestClosePlayer.Character:FindFirstChild("Humanoid") then
+                local closeHumanoid = closestClosePlayer.Character.Humanoid
+                if self:IsPlayingAnimation(closeHumanoid, closeMoves) and not self.Blocking then
+                    self.Blocking = true
+                    self:PressBlockKey()
+                    task.wait(0.15)
+                    self.Blocking = false
+                    self:ReleaseBlockKey()
+                    
+                    -- M1 after block feature
+                    if ConfigManager:Get("M1AfterBlockEnabled") then
+                        self:PressM1()
+                        task.wait(0.1)
+                        self:ReleaseM1()
+                    end
+                end
+            end
+        end)
+        
+        table.insert(self.Connections, heartbeatConn)
+        
+        -- Counter notifier heartbeat
+        if ConfigManager:Get("CounterNotifierEnabled") then
+            local counterConn = RunService.Heartbeat:Connect(function()
+                self:CheckCounterMoves()
+            end)
+            table.insert(self.Connections, counterConn)
         end
     end
-end
-
--- Main Enable/Disable Functions
-function AutoBlock:Enable()
-    if self.State.Active then return end
     
-    self.State.Active = true
-    self.Config.Enabled = true
-    
-    -- Main autoblock heartbeat
-    local heartbeatConn = self.State.RunService.Heartbeat:Connect(function(deltaTime)
-        self:CheckAndBlock()
-        self:CheckCounterMoves()
-        self:CheckCounterBait()
-        self:HandleM1Reach()
+    function AutoBlock:Stop()
+        if not self.Enabled then return end
         
-        if deltaTime % 0.1 < 0.01 then -- Run every ~0.1 seconds
-            self:RemoveStuns()
-            self:HandleNoFatigue()
-            self:RemoveKnockback()
-            self:CheckDeathCounters()
+        self.Enabled = false
+        
+        -- Release block key if holding
+        if self.Blocking then
+            self:ReleaseBlockKey()
+            self.Blocking = false
+        end
+        
+        -- Clear all highlights
+        for character, highlight in pairs(self.CounterHighlights) do
+            if highlight then
+                highlight:Destroy()
+            end
+        end
+        self.CounterHighlights = {}
+        
+        -- Disconnect all connections
+        for _, conn in ipairs(self.Connections) do
+            conn:Disconnect()
+        end
+        self.Connections = {}
+    end
+    
+    function AutoBlock:Toggle()
+        if self.Enabled then
+            self:Stop()
+        else
+            self:Start()
+        end
+        return self.Enabled
+    end
+    
+    -- Create Tabs with better styling
+    local MainTab = Window:Tab({
+        Title = "Main Features",
+        Icon = "zap",
+        Locked = false,
+    })
+    
+    local SettingsTab = Window:Tab({
+        Title = "Configuration",
+        Icon = "sliders",
+        Locked = false,
+    })
+    
+    local AboutTab = Window:Tab({
+        Title = "About",
+        Icon = "info",
+        Locked = false,
+    })
+    
+    -- Main Tab Elements
+    MainTab:Section({
+        Title = "Auto Block System",
+        Desc = "Automatic defense against enemy attacks"
+    })
+    
+    local autoBlockToggle = MainTab:Toggle({
+        Title = "Auto Block",
+        Desc = "Automatically blocks incoming attacks",
+        Value = ConfigManager:Get("AutoBlockEnabled"),
+        Callback = function(state)
+            ConfigManager:Set("AutoBlockEnabled", state)
+            if state then
+                AutoBlock:Start()
+                WindUI:Notify({
+                    Title = "Auto Block",
+                    Content = "Auto Block system activated",
+                    Duration = 2,
+                    Icon = "shield"
+                })
+            else
+                AutoBlock:Stop()
+                WindUI:Notify({
+                    Title = "Auto Block",
+                    Content = "Auto Block system deactivated",
+                    Duration = 2,
+                    Icon = "shield-off"
+                })
+            end
+        end
+    })
+    
+    local counterNotifierToggle = MainTab:Toggle({
+        Title = "Counter Notifier",
+        Desc = "Highlights enemies when they use counter moves (20 studs range)",
+        Value = ConfigManager:Get("CounterNotifierEnabled"),
+        Callback = function(state)
+            ConfigManager:Set("CounterNotifierEnabled", state)
+            if state then
+                WindUI:Notify({
+                    Title = "Counter Notifier",
+                    Content = "Counter detection activated",
+                    Duration = 2,
+                    Icon = "eye"
+                })
+            else
+                WindUI:Notify({
+                    Title = "Counter Notifier",
+                    Content = "Counter detection deactivated",
+                    Duration = 2,
+                    Icon = "eye-off"
+                })
+            end
+            
+            if state and AutoBlock.Enabled then
+                -- Restart to include counter detection
+                AutoBlock:Stop()
+                AutoBlock:Start()
+            elseif not state and AutoBlock.Enabled then
+                -- Just remove counter highlights but keep auto block
+                for character, highlight in pairs(AutoBlock.CounterHighlights) do
+                    if highlight then
+                        highlight:Destroy()
+                    end
+                end
+                AutoBlock.CounterHighlights = {}
+            end
+        end
+    })
+    
+    local m1AfterBlockToggle = MainTab:Toggle({
+        Title = "M1 After Block",
+        Desc = "Automatically attack after blocking a close range move",
+        Value = ConfigManager:Get("M1AfterBlockEnabled"),
+        Callback = function(state)
+            ConfigManager:Set("M1AfterBlockEnabled", state)
+            WindUI:Notify({
+                Title = "M1 After Block",
+                Content = state and "Enabled" or "Disabled",
+                Duration = 2,
+                Icon = "sword"
+            })
+        end
+    })
+    
+    -- Settings Tab Elements
+    SettingsTab:Section({
+        Title = "Auto Block Settings",
+        Desc = "Configure detection ranges"
+    })
+    
+    local closeRangeSlider = SettingsTab:Slider({
+        Title = "Close Range Distance",
+        Desc = "Distance for close range moves (studs)",
+        Value = {
+            Min = 5,
+            Max = 50,
+            Default = ConfigManager:Get("AutoBlockCloseRange"),
+        },
+        Callback = function(value)
+            ConfigManager:Set("AutoBlockCloseRange", tonumber(value))
+            WindUI:Notify({
+                Title = "Settings Updated",
+                Content = "Close range set to " .. value .. " studs",
+                Duration = 2,
+                Icon = "settings"
+            })
+        end
+    })
+    
+    local longRangeSlider = SettingsTab:Slider({
+        Title = "Long Range Distance",
+        Desc = "Distance for long range moves (studs)",
+        Value = {
+            Min = 10,
+            Max = 100,
+            Default = ConfigManager:Get("AutoBlockLongRange"),
+        },
+        Callback = function(value)
+            ConfigManager:Set("AutoBlockLongRange", tonumber(value))
+            WindUI:Notify({
+                Title = "Settings Updated",
+                Content = "Long range set to " .. value .. " studs",
+                Duration = 2,
+                Icon = "settings"
+            })
+        end
+    })
+    
+    SettingsTab:Section({
+        Title = "Configuration Management",
+        Desc = "Save and load your settings"
+    })
+    
+    local saveButton = SettingsTab:Button({
+        Title = "💾 Save Configuration",
+        Desc = "Save current settings to file",
+        Callback = function()
+            ConfigManager:Save()
+            WindUI:Notify({
+                Title = "Success",
+                Content = "Configuration saved successfully!",
+                Duration = 3,
+                Icon = "check"
+            })
+        end
+    })
+    
+    local loadButton = SettingsTab:Button({
+        Title = "🔄 Load Defaults",
+        Desc = "Reset all settings to default values",
+        Callback = function()
+            for key, value in pairs(defaultConfig) do
+                ConfigManager:Set(key, value)
+            end
+            
+            -- Update UI elements
+            autoBlockToggle:SetValue(defaultConfig.AutoBlockEnabled)
+            counterNotifierToggle:SetValue(defaultConfig.CounterNotifierEnabled)
+            m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled)
+            closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange)
+            longRangeSlider:SetValue(defaultConfig.AutoBlockLongRange)
+            
+            -- Restart auto block with new settings
+            if AutoBlock.Enabled then
+                AutoBlock:Stop()
+                AutoBlock:Start()
+            end
+            
+            WindUI:Notify({
+                Title = "Success",
+                Content = "Default settings loaded!",
+                Duration = 3,
+                Icon = "check"
+            })
+        end
+    })
+    
+    local testButton = SettingsTab:Button({
+        Title = "⚡ Test Auto Block",
+        Desc = "Manually test the auto block system",
+        Callback = function()
+            if not AutoBlock.Enabled then
+                WindUI:Notify({
+                    Title = "Test Failed",
+                    Content = "Please enable Auto Block first!",
+                    Duration = 3,
+                    Icon = "alert-triangle"
+                })
+                return
+            end
+            
+            WindUI:Notify({
+                Title = "Test Active",
+                Content = "Auto Block is active. Try attacking with an enemy character.",
+                Duration = 5,
+                Icon = "shield"
+            })
+        end
+    })
+    
+    -- About Tab Elements
+    AboutTab:Section({
+        Title = "About Combat UI",
+        Desc = "Information about this script"
+    })
+    
+    AboutTab:Paragraph({
+        Title = "Version Information",
+        Desc = "Combat UI v1.0\nCreated for The Strongest Battlegrounds\nAuthor: Waspire"
+    })
+    
+    AboutTab:Paragraph({
+        Title = "Features",
+        Desc = "• Advanced Auto Block system\n• Counter move detection\n• M1 After Block feature\n• Configurable detection ranges\n• Settings persistence\n• Clean, modern UI"
+    })
+    
+    AboutTab:Paragraph({
+        Title = "Instructions",
+        Desc = "1. Enable Auto Block in Main Features tab\n2. Adjust ranges in Configuration tab\n3. Save your preferred settings\n4. The system will automatically block enemy attacks"
+    })
+    
+    AboutTab:Button({
+        Title = "📺 YouTube Channel",
+        Desc = "Visit Waspire's YouTube channel",
+        Callback = function()
+            setclipboard("https://youtube.com/@waspire")
+            WindUI:Notify({
+                Title = "YouTube",
+                Content = "Link copied to clipboard!",
+                Duration = 3,
+                Icon = "youtube"
+            })
+        end
+    })
+    
+    AboutTab:Button({
+        Title = "💬 Discord Server",
+        Desc = "Join the community Discord",
+        Callback = function()
+            setclipboard("https://discord.gg/H2bURQxq3T")
+            WindUI:Notify({
+                Title = "Discord",
+                Content = "Link copied to clipboard!",
+                Duration = 3,
+                Icon = "message-circle"
+            })
+        end
+    })
+    
+    -- Initialize based on saved state
+    task.spawn(function()
+        task.wait(1) -- Wait for game to load
+        if ConfigManager:Get("AutoBlockEnabled") then
+            AutoBlock:Start()
+            WindUI:Notify({
+                Title = "Auto Block",
+                Content = "Auto Block system initialized from saved settings",
+                Duration = 3,
+                Icon = "check"
+            })
         end
     end)
     
-    table.insert(self.State.Connections, heartbeatConn)
+    -- Add custom UI elements
+    task.spawn(addVersionLabel)
     
-    -- Character respawn handler
-    local charConn = self.State.LocalPlayer.CharacterAdded:Connect(function()
-        self.State.Blocking = false
-        task.wait(0.5)
-    end)
+    -- Initial notification
+    task.wait(0.9)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Combat UI v1.0",
+        Text = "Waspire's Auto Block system loaded successfully!",
+        Duration = 4,
+    })
     
-    table.insert(self.State.Connections, charConn)
+    Window:SelectTab(1)
     
-    WindUI:Notify({
-        Title = "AutoBlock System",
-        Description = "Enabled",
-        Duration = 2
+else
+    wait(0.1)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Combat UI - Error",
+        Text = "This script only works in The Strongest Battlegrounds",
+        Duration = 3,
     })
 end
-
-function AutoBlock:Disable()
-    if not self.State.Active then return end
-    
-    self.State.Active = false
-    self.Config.Enabled = false
-    
-    -- Release block if active
-    if self.State.Blocking then
-        self:ReleaseBlockKey()
-        self.State.Blocking = false
-    end
-    
-    -- Clean up connections
-    for _, conn in ipairs(self.State.Connections) do
-        conn:Disconnect()
-    end
-    
-    self.State.Connections = {}
-    
-    -- Clean up highlights
-    for _, highlight in pairs(self.State.Highlights) do
-        highlight:Destroy()
-    end
-    self.State.Highlights = {}
-    
-    for _, highlight in pairs(self.State.DeathCounterHighlights) do
-        highlight:Destroy()
-    end
-    self.State.DeathCounterHighlights = {}
-    
-    WindUI:Notify({
-        Title = "AutoBlock System",
-        Description = "Disabled",
-        Duration = 2
-    })
-end
-
-function AutoBlock:Toggle()
-    if self.State.Active then
-        self:Disable()
-    else
-        self:Enable()
-    end
-end
-
--- Initialize
-AutoBlock.State.LocalPlayer = game.Players.LocalPlayer
-print("[AutoBlock] Module initialized")
-
--- CREATE WIND UI INTERFACE
-local CombatTab = Window:CreateTab({
-    Title = "Combat",
-    Icon = "swords"
-})
-
--- Main Settings Section
-local MainSection = CombatTab:CreateSection({
-    Title = "Main Settings",
-    Side = "Left"
-})
-
-local toggleEnabled = MainSection:CreateToggle({
-    Title = "Enable AutoBlock",
-    Description = "Toggle the entire autoblock system",
-    Default = false,
-    Callback = function(value)
-        if value then
-            AutoBlock:Enable()
-        else
-            AutoBlock:Disable()
-        end
-    end
-})
-
--- Range Settings
-local RangeSection = CombatTab:CreateSection({
-    Title = "Range Settings",
-    Side = "Left"
-})
-
-RangeSection:CreateSlider({
-    Title = "Close Range",
-    Description = "Distance for close-range moves",
-    Default = AutoBlock.Config.CloseRange,
-    Min = 5,
-    Max = 30,
-    Rounding = 1,
-    Callback = function(value)
-        AutoBlock.Config.CloseRange = value
-    end
-})
-
-RangeSection:CreateSlider({
-    Title = "Long Range",
-    Description = "Distance for long-range moves",
-    Default = AutoBlock.Config.LongRange,
-    Min = 10,
-    Max = 50,
-    Rounding = 1,
-    Callback = function(value)
-        AutoBlock.Config.LongRange = value
-    end
-})
-
-RangeSection:CreateSlider({
-    Title = "Counter Range",
-    Description = "Distance for counter detection",
-    Default = AutoBlock.Config.CounterRange,
-    Min = 5,
-    Max = 40,
-    Rounding = 1,
-    Callback = function(value)
-        AutoBlock.Config.CounterRange = value
-    end
-})
-
--- Timing Settings
-local TimingSection = CombatTab:CreateSection({
-    Title = "Timing Settings",
-    Side = "Right"
-})
-
-TimingSection:CreateSlider({
-    Title = "Block Duration",
-    Description = "How long to hold block",
-    Default = AutoBlock.Config.BlockDuration,
-    Min = 0.05,
-    Max = 0.3,
-    Rounding = 0.01,
-    Callback = function(value)
-        AutoBlock.Config.BlockDuration = value
-    end
-})
-
--- Features Section
-local FeaturesSection = CombatTab:CreateSection({
-    Title = "Features",
-    Side = "Left"
-})
-
-FeaturesSection:CreateToggle({
-    Title = "M1 After Block",
-    Description = "Attack automatically after blocking",
-    Default = AutoBlock.Config.M1AfterBlock,
-    Callback = function(value)
-        AutoBlock.Config.M1AfterBlock = value
-    end
-})
-
-FeaturesSection:CreateToggle({
-    Title = "Counter Detection",
-    Description = "Highlight players using counters",
-    Default = AutoBlock.Config.CounterDetection,
-    Callback = function(value)
-        AutoBlock.Config.CounterDetection = value
-    end
-})
-
-FeaturesSection:CreateToggle({
-    Title = "Death Counter Detection",
-    Description = "Detect death counter usage",
-    Default = AutoBlock.Config.DeathCounterDetection,
-    Callback = function(value)
-        AutoBlock.Config.DeathCounterDetection = value
-    end
-})
-
-FeaturesSection:CreateToggle({
-    Title = "Counter Bait",
-    Description = "React when enemies counter",
-    Default = AutoBlock.Config.CounterBait,
-    Callback = function(value)
-        AutoBlock.Config.CounterBait = value
-    end
-})
-
-FeaturesSection:CreateToggle({
-    Title = "L Emote",
-    Description = "Play L emote when baiting",
-    Default = AutoBlock.Config.LEmote,
-    Callback = function(value)
-        AutoBlock.Config.LEmote = value
-    end
-})
-
--- Advanced Features
-local AdvancedSection = CombatTab:CreateSection({
-    Title = "Advanced Features",
-    Side = "Right"
-})
-
-AdvancedSection:CreateToggle({
-    Title = "No Stun",
-    Description = "Remove stun effects",
-    Default = AutoBlock.Config.NoStun,
-    Callback = function(value)
-        AutoBlock.Config.NoStun = value
-    end
-})
-
-AdvancedSection:CreateToggle({
-    Title = "No Fatigue",
-    Description = "Prevent jump fatigue",
-    Default = AutoBlock.Config.NoFatigue,
-    Callback = function(value)
-        AutoBlock.Config.NoFatigue = value
-    end
-})
-
-AdvancedSection:CreateToggle({
-    Title = "Anti Knockback",
-    Description = "Prevent knockback effects",
-    Default = AutoBlock.Config.AntiKnockback,
-    Callback = function(value)
-        AutoBlock.Config.AntiKnockback = value
-    end
-})
-
-AdvancedSection:CreateToggle({
-    Title = "M1 Reach",
-    Description = "Extend M1 reach",
-    Default = AutoBlock.Config.M1Reach,
-    Callback = function(value)
-        AutoBlock.Config.M1Reach = value
-    end
-})
-
-AdvancedSection:CreateToggle({
-    Title = "M1 Reset",
-    Description = "Reset M1 animations",
-    Default = AutoBlock.Config.M1Reset,
-    Callback = function(value)
-        AutoBlock.Config.M1Reset = value
-    end
-})
-
-AdvancedSection:CreateToggle({
-    Title = "Anti Death Counter",
-    Description = "Bypass death counter",
-    Default = AutoBlock.Config.AntiDeathCounter,
-    Callback = function(value)
-        AutoBlock.Config.AntiDeathCounter = value
-    end
-})
-
-AdvancedSection:CreateToggle({
-    Title = "Show Cooldowns",
-    Description = "Display ability cooldowns",
-    Default = AutoBlock.Config.ShowCD,
-    Callback = function(value)
-        AutoBlock.Config.ShowCD = value
-    end
-})
-
--- Counter Bait Message
-local BaitSection = CombatTab:CreateSection({
-    Title = "Bait Settings",
-    Side = "Right"
-})
-
-BaitSection:CreateInput({
-    Title = "Bait Message",
-    Description = "Message to send when baiting",
-    Default = AutoBlock.Config.CounterBaitMessage,
-    Placeholder = "Enter bait message...",
-    Callback = function(value)
-        AutoBlock.Config.CounterBaitMessage = value
-    end
-})
-
--- Quick Actions
-local ActionsSection = CombatTab:CreateSection({
-    Title = "Quick Actions",
-    Side = "Left"
-})
-
-ActionsSection:CreateButton({
-    Title = "Toggle AutoBlock",
-    Description = "Quick enable/disable",
-    Callback = function()
-        AutoBlock:Toggle()
-        toggleEnabled:Set(not toggleEnabled.Value)
-    end
-})
-
-ActionsSection:CreateButton({
-    Title = "Test Block",
-    Description = "Manually trigger a block",
-    Callback = function()
-        if AutoBlock.State.Active then
-            AutoBlock:ExecuteBlock()
-            WindUI:Notify({
-                Title = "Test Block",
-                Description = "Manual block triggered",
-                Duration = 1
-            })
-        else
-            WindUI:Notify({
-                Title = "Error",
-                Description = "Enable AutoBlock first",
-                Duration = 2
-            })
-        end
-    end
-})
-
-ActionsSection:CreateButton({
-    Title = "Reset Settings",
-    Description = "Reset all to defaults",
-    Callback = function()
-        AutoBlock.Config = {
-            Enabled = false,
-            CloseRange = 14,
-            LongRange = 35,
-            CounterRange = 20,
-            BlockDuration = 0.15,
-            CheckInterval = 0.1,
-            M1AfterBlock = false,
-            CounterDetection = true,
-            DeathCounterDetection = true,
-            CounterBait = false,
-            LEmote = false,
-            AutoCounterM1 = false,
-            M1Reach = false,
-            M1Reset = false,
-            AntiDeathCounter = false,
-            NoStun = false,
-            NoFatigue = false,
-            AntiKnockback = false,
-            ShowCD = false,
-            CounterBaitMessage = "Simon says counter"
-        }
-        
-        WindUI:Notify({
-            Title = "Settings Reset",
-            Description = "All settings restored to default",
-            Duration = 2
-        })
-    end
-})
-
--- Status Display
-local StatusSection = CombatTab:CreateSection({
-    Title = "Status",
-    Side = "Right"
-})
-
-local statusLabel = StatusSection:CreateLabel({
-    Title = "Status: Inactive",
-    Description = "AutoBlock is disabled"
-})
-
--- Update status
-local function updateStatus()
-    if AutoBlock.State.Active then
-        statusLabel:Update({
-            Title = "Status: Active",
-            Description = "AutoBlock is protecting you"
-        })
-    else
-        statusLabel:Update({
-            Title = "Status: Inactive",
-            Description = "AutoBlock is disabled"
-        })
-    end
-end
-
--- Hook status updates
-toggleEnabled.Callback = function(value)
-    if value then
-        AutoBlock:Enable()
-    else
-        AutoBlock:Disable()
-    end
-    updateStatus()
-end
-
--- Keybind for toggle
-AutoBlock.State.UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
-        AutoBlock:Toggle()
-        toggleEnabled:Set(not toggleEnabled.Value)
-        updateStatus()
-    end
-end)
-
--- Initial notification
-WindUI:Notify({
-    Title = "AutoBlock System",
-    Description = "Loaded successfully. Press INSERT to toggle.",
-    Duration = 3
-})
-
--- Return module
-return {
-    Window = Window,
-    AutoBlock = AutoBlock
-}
