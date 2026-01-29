@@ -6,7 +6,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     
     -- Create configuration manager
     local ConfigManager = {}
-    local configFile = "CombatGUI_Config.json"
+    local configFile = "WaspireCombatUI.json"
     
     -- Default configuration
     local defaultConfig = {
