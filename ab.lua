@@ -886,3 +886,376 @@ function AutoBlock:Toggle()
                 WindUI:Notify({
                     Title = "Camlock",
                     Content = "Camlock deactivated",
+                    Duration = 2,
+                    Icon = "crosshair"
+                })
+            end
+        end
+    })
+    
+    local keybindButton = CamlockTab:Button({
+        Title = "Change Keybind (Currently: " .. ConfigManager:Get("CamlockKeybind") .. ")",
+        Desc = "Click then press a key to set as camlock toggle",
+        Callback = function()
+            WindUI:Notify({
+                Title = "Keybind Setup",
+                Content = "Press any key to set as camlock toggle...",
+                Duration = 5,
+                Icon = "key"
+            })
+            
+            local input = game:GetService("UserInputService").InputBegan:Wait()
+            local key = input.KeyCode.Name
+            
+            ConfigManager:Set("CamlockKeybind", key)
+            keybindButton:SetTitle("Change Keybind (Currently: " .. key .. ")")
+            
+            WindUI:Notify({
+                Title = "Keybind Updated",
+                Content = "Camlock keybind set to: " .. key,
+                Duration = 3,
+                Icon = "check"
+            })
+        end
+    })
+    
+    local mobileCamlockToggle = CamlockTab:Toggle({
+        Title = "Mobile Camlock Button",
+        Desc = "Add a mobile button for camlock control",
+        Value = ConfigManager:Get("MobileCamlockButton"),
+        Callback = function(state)
+            ConfigManager:Set("MobileCamlockButton", state)
+            if state then
+                Camlock:CreateMobileButton()
+                WindUI:Notify({
+                    Title = "Mobile Button",
+                    Content = "Mobile camlock button added to screen",
+                    Duration = 2,
+                    Icon = "smartphone"
+                })
+            else
+                Camlock:RemoveMobileButton()
+                WindUI:Notify({
+                    Title = "Mobile Button",
+                    Content = "Mobile camlock button removed",
+                    Duration = 2,
+                    Icon = "smartphone-off"
+                })
+            end
+        end
+    })
+    
+    -- Settings Tab Elements (without emojis)
+    SettingsTab:Section({
+        Title = "Configuration Management",
+        Desc = "Save and load your settings"
+    })
+    
+    local saveButton = SettingsTab:Button({
+        Title = "Save Configuration",
+        Desc = "Save current settings to file",
+        Callback = function()
+            ConfigManager:Save()
+            WindUI:Notify({
+                Title = "Success",
+                Content = "Configuration saved successfully!",
+                Duration = 3,
+                Icon = "check"
+            })
+        end
+    })
+    
+    local loadButton = SettingsTab:Button({
+        Title = "Load Defaults",
+        Desc = "Reset all settings to default values",
+        Callback = function()
+            for key, value in pairs(defaultConfig) do
+                ConfigManager:Set(key, value)
+            end
+            
+            -- Update UI elements
+            autoBlockToggle:SetValue(defaultConfig.AutoBlockEnabled)
+            counterNotifierToggle:SetValue(defaultConfig.CounterNotifierEnabled)
+            m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled)
+            closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange)
+            longRangeSlider:SetValue(defaultConfig.AutoBlockLongRange)
+            camlockToggle:SetValue(defaultConfig.CamlockEnabled)
+            mobileCamlockToggle:SetValue(defaultConfig.MobileCamlockButton)
+            keybindButton:SetTitle("Change Keybind (Currently: " .. defaultConfig.CamlockKeybind .. ")")
+            
+            -- Restart systems with new settings
+            if AutoBlock.Enabled then
+                AutoBlock:Stop()
+                AutoBlock:Start()
+            end
+            
+            if Camlock.Enabled then
+                Camlock:Stop()
+                if defaultConfig.CamlockEnabled then
+                    local target = Camlock:FindClosestTarget()
+                    if target then
+                        Camlock.Target = target
+                        Camlock:Start()
+                    end
+                end
+            end
+            
+            if Camlock.MobileButton and not defaultConfig.MobileCamlockButton then
+                Camlock:RemoveMobileButton()
+            elseif not Camlock.MobileButton and defaultConfig.MobileCamlockButton then
+                Camlock:CreateMobileButton()
+            end
+            
+            WindUI:Notify({
+                Title = "Success",
+                Content = "Default settings loaded!",
+                Duration = 3,
+                Icon = "check"
+            })
+        end
+    })
+    
+    local testButton = SettingsTab:Button({
+        Title = "Test Auto Block",
+        Desc = "Manually test the auto block system",
+        Callback = function()
+            if not AutoBlock.Enabled then
+                WindUI:Notify({
+                    Title = "Test Failed",
+                    Content = "Please enable Auto Block first!",
+                    Duration = 3,
+                    Icon = "alert-triangle"
+                })
+                return
+            end
+            
+            WindUI:Notify({
+                Title = "Test Active",
+                Content = "Auto Block is active. Try attacking with an enemy character.",
+                Duration = 5,
+                Icon = "shield"
+            })
+        end
+    })
+    
+    -- About Tab Elements
+    AboutTab:Section({
+        Title = "About Combat UI",
+        Desc = "Information about this script"
+    })
+    
+    AboutTab:Paragraph({
+        Title = "Version Information",
+        Desc = "Combat UI v1.0\nCreated for The Strongest Battlegrounds\nAuthor: Waspire"
+    })
+    
+    AboutTab:Paragraph({
+        Title = "Features",
+        Desc = "• Advanced Auto Block system\n• Camlock with mobile button\n• Counter move detection\n• M1 After Block feature\n• Configurable detection ranges\n• Settings persistence\n• Clean, modern UI"
+    })
+    
+    AboutTab:Paragraph({
+        Title = "Instructions",
+        Desc = "1. Enable Auto Block in Combat tab\n2. Adjust ranges in Combat tab\n3. Configure Camlock in Camlock tab\n4. Save your preferred settings"
+    })
+    
+    AboutTab:Button({
+        Title = "YouTube Channel",
+        Desc = "Visit Waspire's YouTube channel",
+        Callback = function()
+            setclipboard("https://youtube.com/@waspire")
+            WindUI:Notify({
+                Title = "YouTube",
+                Content = "Link copied to clipboard!",
+                Duration = 3,
+                Icon = "youtube"
+            })
+        end
+    })
+    
+    AboutTab:Button({
+        Title = "Discord Server",
+        Desc = "Join the community Discord",
+        Callback = function()
+            setclipboard("https://discord.gg/H2bURQxq3T")
+            WindUI:Notify({
+                Title = "Discord",
+                Content = "Link copied to clipboard!",
+                Duration = 3,
+                Icon = "message-circle"
+            })
+        end
+    })
+    
+    -- Keybind handler for camlock
+    game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+        if not processed and input.KeyCode.Name == ConfigManager:Get("CamlockKeybind") then
+            if Camlock:Toggle() then
+                WindUI:Notify({
+                    Title = "Camlock",
+                    Content = "Camlock activated",
+                    Duration = 1.5,
+                    Icon = "crosshair"
+                })
+            else
+                WindUI:Notify({
+                    Title = "Camlock",
+                    Content = "Camlock deactivated",
+                    Duration = 1.5,
+                    Icon = "crosshair"
+                })
+            end
+        end
+    end)
+    
+    -- Initialize based on saved state
+    task.spawn(function()
+        task.wait(1) -- Wait for game to load
+        
+        -- Initialize auto block
+        if ConfigManager:Get("AutoBlockEnabled") then
+            AutoBlock:Start()
+            WindUI:Notify({
+                Title = "Auto Block",
+                Content = "Auto Block system initialized from saved settings",
+                Duration = 3,
+                Icon = "check"
+            })
+        end
+        
+        -- Initialize camlock
+        if ConfigManager:Get("CamlockEnabled") then
+            local target = Camlock:FindClosestTarget()
+            if target then
+                Camlock.Target = target
+                Camlock:Start()
+                Camlock.ButtonState = "ON"
+                Camlock:UpdateMobileButtonText()
+            else
+                ConfigManager:Set("CamlockEnabled", false)
+            end
+        end
+        
+        -- Initialize mobile camlock button
+        if ConfigManager:Get("MobileCamlockButton") then
+            Camlock:CreateMobileButton()
+        end
+    end)
+    
+    -- Add custom UI elements to window (v1.0 label and social icons)
+    local function addCustomUIElements()
+        task.wait(0.5) -- Wait for window to fully load
+        local coreGui = game:GetService("CoreGui")
+        
+        -- Find the WindUI window
+        for _, gui in pairs(coreGui:GetChildren()) do
+            if gui.Name == "WindUI" then
+                local combatGUI = gui:FindFirstChild("CombatGUI")
+                if combatGUI then
+                    local titleBar = combatGUI:FindFirstChild("TitleBar")
+                    if titleBar then
+                        -- Add version label (crimson color)
+                        local versionLabel = Instance.new("TextLabel")
+                        versionLabel.Name = "VersionLabel"
+                        versionLabel.Text = "v1.0"
+                        versionLabel.TextColor3 = Color3.fromRGB(220, 50, 50) -- Crimson color
+                        versionLabel.Font = Enum.Font.GothamBold
+                        versionLabel.TextSize = 12
+                        versionLabel.BackgroundTransparency = 1
+                        versionLabel.Size = UDim2.new(0, 40, 0, 20)
+                        versionLabel.Position = UDim2.new(0, 100, 0, 10)
+                        versionLabel.Parent = titleBar
+                        
+                        -- Add social icons container
+                        local socialContainer = Instance.new("Frame")
+                        socialContainer.Name = "SocialIcons"
+                        socialContainer.BackgroundTransparency = 1
+                        socialContainer.Size = UDim2.new(0, 70, 0, 30)
+                        socialContainer.Position = UDim2.new(1, -80, 0, 5)
+                        socialContainer.Parent = titleBar
+                        
+                        -- YouTube icon
+                        local youtubeButton = Instance.new("ImageButton")
+                        youtubeButton.Name = "YouTubeIcon"
+                        youtubeButton.Image = "rbxassetid://108320733835485" -- YouTube icon
+                        youtubeButton.BackgroundTransparency = 1
+                        youtubeButton.Size = UDim2.new(0, 25, 0, 25)
+                        youtubeButton.Position = UDim2.new(0, 0, 0, 2)
+                        youtubeButton.Parent = socialContainer
+                        
+                        -- Discord icon
+                        local discordButton = Instance.new("ImageButton")
+                        discordButton.Name = "DiscordIcon"
+                        discordButton.Image = "rbxassetid://119731774091515" -- Discord icon
+                        discordButton.BackgroundTransparency = 1
+                        discordButton.Size = UDim2.new(0, 25, 0, 25)
+                        discordButton.Position = UDim2.new(0, 35, 0, 2)
+                        discordButton.Parent = socialContainer
+                        
+                        -- YouTube click event
+                        youtubeButton.MouseButton1Click:Connect(function()
+                            setclipboard("https://youtube.com/@waspire")
+                            WindUI:Notify({
+                                Title = "YouTube",
+                                Content = "Link copied to clipboard: https://youtube.com/@waspire",
+                                Duration = 3,
+                                Icon = "youtube"
+                            })
+                        end)
+                        
+                        -- Discord click event
+                        discordButton.MouseButton1Click:Connect(function()
+                            setclipboard("https://discord.gg/H2bURQxq3T")
+                            WindUI:Notify({
+                                Title = "Discord",
+                                Content = "Link copied to clipboard: https://discord.gg/H2bURQxq3T",
+                                Duration = 3,
+                                Icon = "message-circle"
+                            })
+                        end)
+                        
+                        -- Add hover effects
+                        youtubeButton.MouseEnter:Connect(function()
+                            youtubeButton.ImageColor3 = Color3.fromRGB(255, 50, 50)
+                        end)
+                        
+                        youtubeButton.MouseLeave:Connect(function()
+                            youtubeButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                        end)
+                        
+                        discordButton.MouseEnter:Connect(function()
+                            discordButton.ImageColor3 = Color3.fromRGB(88, 101, 242)
+                        end)
+                        
+                        discordButton.MouseLeave:Connect(function()
+                            discordButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                        end)
+                        
+                        break
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Call the function to add custom UI
+    task.spawn(addCustomUIElements)
+    
+    -- Initial notification
+    task.wait(0.9)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Combat UI v1.0",
+        Text = "Waspire's Combat system loaded successfully!",
+        Duration = 4,
+    })
+    
+    Window:SelectTab(1)
+    
+else
+    wait(0.1)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Combat UI - Error",
+        Text = "This script only works in The Strongest Battlegrounds",
+        Duration = 3,
+    })
+end
