@@ -2,7 +2,7 @@
 -- Fixed version with proper Wind UI integration
 
 -- Load Wind UI
-local WindUI = loadstring(game:HttpGet("https://githubusercontent.com/Footagesus/WindUI/main/source.lua"))()
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/source.lua"))()
 
 -- Create Window
 local Window = WindUI:CreateWindow({
