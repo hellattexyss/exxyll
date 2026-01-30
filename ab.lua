@@ -648,22 +648,7 @@ end
 
 -- Toggle camlock with cooldown
 function Camlock:Toggle()
-    local currentTime = tick()
-    if currentTime - self.LastToggleTime < self.ToggleCooldown then
-        return self.Enabled
-    end
-    
-    self.LastToggleTime = currentTime
-    
-    if self.Enabled then
-        self:Stop()
-        return false
-    else
-        return self:Start()
-    end
-end
-
--- FIXED: Create mobile button with proper touch handling
+    local currentTime = tic-- FIXED: Create mobile button with proper touch handling
 function Camlock:CreateMobileButton()
     if self.MobileButton then return end
     
@@ -700,23 +685,21 @@ function Camlock:CreateMobileButton()
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = button
     
-    -- Dragging variables
-    local isDragging = false
+    -- FIXED: Simple and reliable dragging system
+    local dragging = false
     local dragStart = Vector2.new(0, 0)
     local startPos = UDim2.new(0, 0, 0, 0)
     
-    -- Mouse down for dragging
     button.MouseButton1Down:Connect(function()
-        isDragging = true
+        dragging = true
         self.IsDragging = true
         dragStart = Vector2.new(self.InputService:GetMouseLocation().X, self.InputService:GetMouseLocation().Y)
         startPos = container.Position
     end)
     
-    -- Mouse move for dragging
-    local mouseMoveConn
-    mouseMoveConn = self.InputService.InputChanged:Connect(function(input)
-        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+    -- Mouse movement for dragging
+    self.InputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local currentPos = Vector2.new(self.InputService:GetMouseLocation().X, self.InputService:GetMouseLocation().Y)
             local delta = currentPos - dragStart
             container.Position = UDim2.new(
@@ -728,20 +711,19 @@ function Camlock:CreateMobileButton()
         end
     end)
     
-    -- Mouse up to end dragging and handle clicks
-    local mouseUpConn
-    mouseUpConn = self.InputService.InputEnded:Connect(function(input)
+    -- Mouse up to stop dragging
+    self.InputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            if isDragging then
-                isDragging = false
-                self.IsDragging = false
-            end
+            dragging = false
+            self.IsDragging = false
         end
     end)
     
-    -- FIXED: Proper click handler
+    -- FIXED: Proper click handler with delay to prevent click after drag
     button.MouseButton1Click:Connect(function()
-        -- Don't toggle if we were dragging
+        -- Small delay to ensure dragging is finished
+        task.wait(0.05)
+        
         if self.IsDragging then
             self.IsDragging = false
             return
@@ -766,15 +748,24 @@ function Camlock:CreateMobileButton()
         end
     end)
     
-    -- Store the container and connections
+    -- Store the container
     self.MobileButton = screenGui
     self.MobileButtonFrame = container
     
     screenGui.Parent = game:GetService("CoreGui")
+        endk()
+    if currentTime - self.LastToggleTime < self.ToggleCooldown then
+        return self.Enabled
+    end
     
-    -- Store connections for cleanup
-    table.insert(self.Connections, mouseMoveConn)
-    table.insert(self.Connections, mouseUpConn)
+    self.LastToggleTime = currentTime
+    
+    if self.Enabled then
+        self:Stop()
+        return false
+    else
+        return self:Start()
+    end
 end
 
 -- Update mobile button text
