@@ -1390,6 +1390,199 @@ local pingESPToggle = ESPTab:Toggle({
         end
     end
 })
+-- Opponent Block ESP System
+local BlockESP = {
+    Enabled = false,
+    BlockAnimationId = "rbxassetid://10470389827",
+    BlockImageId = "rbxassetid://13180179085",  -- Your custom image
+    Connections = {}
+}
+
+function BlockESP:CreateBlockIndicator(character)
+    local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+    if not torso then return nil end
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "BlockIndicator"
+    billboard.Adornee = torso
+    billboard.Size = UDim2.new(2, 0, 2, 0)
+    billboard.StudsOffset = Vector3.new(0, 1.5, 0)  -- Slightly higher
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = 100
+    billboard.Parent = torso
+    
+    local imageLabel = Instance.new("ImageLabel")
+    imageLabel.Size = UDim2.new(1, 0, 1, 0)
+    imageLabel.BackgroundTransparency = 1
+    imageLabel.Image = self.BlockImageId
+    imageLabel.ImageTransparency = 0.3
+    imageLabel.Parent = billboard
+    
+    -- Pulsing effect
+    task.spawn(function()
+        while billboard and billboard.Parent do
+            for i = 0, 1, 0.05 do
+                if not billboard or not billboard.Parent then break end
+                local pulse = 0.3 + (math.sin(i * math.pi) * 0.4)
+                imageLabel.ImageTransparency = pulse
+                task.wait(0.05)
+            end
+        end
+    end)
+    
+    return billboard
+end
+
+function BlockESP:SetupPlayer(player)
+    if player == LocalPlayer then return end
+    
+    local charAddedConn = player.CharacterAdded:Connect(function(character)
+        task.wait(1) -- Wait for character to load
+        
+        local humanoid = character:FindFirstChild("Humanoid")
+        if not humanoid then return end
+        
+        local animationConn = humanoid.AnimationPlayed:Connect(function(track)
+            if not self.Enabled then return end
+            
+            if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                -- Create block indicator
+                local billboard = self:CreateBlockIndicator(character)
+                
+                if billboard then
+                    -- Remove indicator when animation stops
+                    track.Stopped:Connect(function()
+                        if billboard and billboard.Parent then
+                            billboard:Destroy()
+                        end
+                    end)
+                    
+                    -- Also remove if player dies
+                    humanoid.Died:Connect(function()
+                        if billboard and billboard.Parent then
+                            billboard:Destroy()
+                        end
+                    end)
+                end
+            end
+        end)
+        
+        table.insert(self.Connections, animationConn)
+        
+        -- Handle existing animations
+        for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+            if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                self:CreateBlockIndicator(character)
+            end
+        end
+    end)
+    
+    table.insert(self.Connections, charAddedConn)
+    
+    -- Handle existing character
+    if player.Character then
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            local animationConn = humanoid.AnimationPlayed:Connect(function(track)
+                if not self.Enabled then return end
+                
+                if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                    local billboard = self:CreateBlockIndicator(player.Character)
+                    
+                    if billboard then
+                        track.Stopped:Connect(function()
+                            if billboard and billboard.Parent then
+                                billboard:Destroy()
+                            end
+                        end)
+                    end
+                end
+            end)
+            
+            table.insert(self.Connections, animationConn)
+            
+            -- Check for existing block animation
+            for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+                if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                    self:CreateBlockIndicator(player.Character)
+                end
+            end
+        end
+    end
+end
+
+function BlockESP:Start()
+    if self.Enabled then return end
+    
+    self.Enabled = true
+    
+    -- Setup all players
+    for _, player in ipairs(Players:GetPlayers()) do
+        self:SetupPlayer(player)
+    end
+    
+    -- Setup for new players
+    local playerAddedConn = Players.PlayerAdded:Connect(function(player)
+        self:SetupPlayer(player)
+    end)
+    
+    table.insert(self.Connections, playerAddedConn)
+    
+    WindUI:Notify({
+        Title = "Opponent Block ESP",
+        Content = "Block indicator ESP activated",
+        Duration = 2,
+        Icon = "shield"
+    })
+end
+
+function BlockESP:Stop()
+    if not self.Enabled then return end
+    
+    self.Enabled = false
+    
+    -- Disconnect all connections
+    for _, conn in ipairs(self.Connections) do
+        if conn then
+            pcall(function() conn:Disconnect() end)
+        end
+    end
+    self.Connections = {}
+    
+    -- Remove all existing indicators
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            local torso = player.Character:FindFirstChild("Torso") or player.Character:FindFirstChild("UpperTorso")
+            if torso then
+                local indicator = torso:FindFirstChild("BlockIndicator")
+                if indicator then
+                    indicator:Destroy()
+                end
+            end
+        end
+    end
+    
+    WindUI:Notify({
+        Title = "Opponent Block ESP",
+        Content = "Block indicator ESP deactivated",
+        Duration = 2,
+        Icon = "shield-off"
+    })
+end
+
+local blockESPToggle = ESPTab:Toggle({
+    Title = "Opponent Block ESP",
+    Desc = "Shows indicator when enemies use block animation",
+    Value = false,
+    Callback = function(state)
+        if state then
+            BlockESP:Start()
+        else
+            BlockESP:Stop()
+        end
+    end
+})
+
     -- Death Counter ESP System
     local DeathCounterESP = {
         Enabled = false,
