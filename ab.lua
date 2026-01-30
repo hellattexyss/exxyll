@@ -326,6 +326,7 @@ local Camlock = {
     TargetHighlight = nil,
     Connections = {},
     MobileButton = nil,
+    MobileButtonFrame = nil,
     TargetDisplay = nil,
     ButtonState = "OFF",
     IsDragging = false,
@@ -335,7 +336,9 @@ local Camlock = {
     KeybindConnection = nil,
     InputService = game:GetService("UserInputService"),
     LastClickTime = 0,
-    ClickCooldown = 0.3
+    ClickCooldown = 0.3,
+    DragStart = nil,
+    DragStartPos = nil
 }
 
 -- Proper input detection
@@ -515,10 +518,9 @@ end
 
 -- Clear target display
 function Camlock:ClearTargetDisplay()
-    if self.TargetDisplay and self.TargetDisplay:FindFirstChild("TargetFrame") then
-        local frame = self.TargetDisplay.TargetFrame
-        frame.TargetName.Text = ""
-        frame.TargetInfo.Text = ""
+    if self.TargetDisplay then
+        self.TargetDisplay:Destroy()
+        self.TargetDisplay = nil
     end
 end
 
@@ -671,6 +673,15 @@ function Camlock:CreateMobileButton()
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.IgnoreGuiInset = true
     
+    -- Main container frame
+    local container = Instance.new("Frame")
+    container.Name = "CamlockContainer"
+    container.BackgroundTransparency = 1
+    container.Size = UDim2.new(0, 120, 0, 40)
+    container.Position = UDim2.new(1, -130, 0.5, -20)
+    container.Parent = screenGui
+    
+    -- The actual button
     local button = Instance.new("TextButton")
     button.Name = "CamlockButton"
     button.Text = "CAMLOCK " .. self.ButtonState
@@ -681,36 +692,34 @@ function Camlock:CreateMobileButton()
     button.BorderColor3 = Color3.fromRGB(255, 50, 50)
     button.BorderSizePixel = 2
     button.AutoButtonColor = false
-    button.Size = UDim2.new(0, 120, 0, 40)
-    button.Position = UDim2.new(1, -130, 0.5, -20)  -- Fixed position
+    button.Size = UDim2.new(1, 0, 1, 0)
+    button.Position = UDim2.new(0, 0, 0, 0)
+    button.Parent = container
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = button
     
-    -- FIXED: Simple dragging logic with mouse only
-    local dragging = false
-    local dragStart, startPos
+    -- Dragging variables
+    local isDragging = false
+    local dragStart = Vector2.new(0, 0)
+    local startPos = UDim2.new(0, 0, 0, 0)
     
+    -- Mouse down for dragging
     button.MouseButton1Down:Connect(function()
-        dragging = true
+        isDragging = true
         self.IsDragging = true
         dragStart = Vector2.new(self.InputService:GetMouseLocation().X, self.InputService:GetMouseLocation().Y)
-        startPos = button.Position
+        startPos = container.Position
     end)
     
-    local mouseUpConn = self.InputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-            self.IsDragging = false
-        end
-    end)
-    
-    local dragConn = RunService.Heartbeat:Connect(function()
-        if dragging then
+    -- Mouse move for dragging
+    local mouseMoveConn
+    mouseMoveConn = self.InputService.InputChanged:Connect(function(input)
+        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local currentPos = Vector2.new(self.InputService:GetMouseLocation().X, self.InputService:GetMouseLocation().Y)
             local delta = currentPos - dragStart
-            button.Position = UDim2.new(
+            container.Position = UDim2.new(
                 startPos.X.Scale, 
                 startPos.X.Offset + delta.X,
                 startPos.Y.Scale, 
@@ -719,7 +728,18 @@ function Camlock:CreateMobileButton()
         end
     end)
     
-    -- FIXED: Proper click handler - NO TOUCH HANDLING TO AVOID MULTI-TOUCH BUGS
+    -- Mouse up to end dragging and handle clicks
+    local mouseUpConn
+    mouseUpConn = self.InputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if isDragging then
+                isDragging = false
+                self.IsDragging = false
+            end
+        end
+    end)
+    
+    -- FIXED: Proper click handler
     button.MouseButton1Click:Connect(function()
         -- Don't toggle if we were dragging
         if self.IsDragging then
@@ -746,19 +766,21 @@ function Camlock:CreateMobileButton()
         end
     end)
     
-    button.Parent = screenGui
-    screenGui.Parent = game:GetService("CoreGui")
+    -- Store the container and connections
     self.MobileButton = screenGui
+    self.MobileButtonFrame = container
+    
+    screenGui.Parent = game:GetService("CoreGui")
     
     -- Store connections for cleanup
+    table.insert(self.Connections, mouseMoveConn)
     table.insert(self.Connections, mouseUpConn)
-    table.insert(self.Connections, dragConn)
 end
 
 -- Update mobile button text
 function Camlock:UpdateMobileButtonText()
-    if self.MobileButton and self.MobileButton:FindFirstChild("CamlockButton") then
-        local button = self.MobileButton.CamlockButton
+    if self.MobileButtonFrame and self.MobileButtonFrame:FindFirstChild("CamlockButton") then
+        local button = self.MobileButtonFrame.CamlockButton
         button.Text = "CAMLOCK " .. self.ButtonState
         
         if self.ButtonState == "ON" then
@@ -776,6 +798,7 @@ function Camlock:RemoveMobileButton()
     if self.MobileButton then
         self.MobileButton:Destroy()
         self.MobileButton = nil
+        self.MobileButtonFrame = nil
     end
 end
 
@@ -1034,7 +1057,7 @@ function Camlock:SetupKeybind()
         Desc = "Visual indicators for enemy abilities"
     })
     
-    -- Counter ESP System (FIXED)
+    -- Counter ESP System (FIXED - BLUE HIGHLIGHT, 4 SECONDS)
     local CounterESP = {
         Enabled = false,
         Highlights = {},
@@ -1060,9 +1083,9 @@ function Camlock:SetupKeybind()
     function CounterESP:AddHighlight(character)
         if not self.Highlights[character] then
             local highlight = Instance.new("Highlight")
-            highlight.FillColor = Color3.fromRGB(255, 255, 255) -- WHITE only
-            highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
-            highlight.FillTransparency = 0.5
+            highlight.FillColor = Color3.fromRGB(100, 150, 255) -- LIGHT BLUE color
+            highlight.OutlineColor = Color3.fromRGB(200, 220, 255)
+            highlight.FillTransparency = 0.3 -- Same transparency as camlock
             highlight.OutlineTransparency = 0
             highlight.Parent = character
             self.Highlights[character] = highlight
@@ -1074,13 +1097,17 @@ function Camlock:SetupKeybind()
         if highlight then
             if fade then
                 -- Fade out effect
-                for i = 0.5, 1, 0.1 do
-                    highlight.FillTransparency = i
-                    highlight.OutlineTransparency = i
+                for i = 0.3, 1, 0.1 do
+                    if highlight then
+                        highlight.FillTransparency = i
+                        highlight.OutlineTransparency = i
+                    end
                     task.wait(0.05)
                 end
             end
-            highlight:Destroy()
+            if highlight then
+                highlight:Destroy()
+            end
             self.Highlights[character] = nil
         end
         self.Timers[character] = nil
@@ -1109,7 +1136,7 @@ function Camlock:SetupKeybind()
                         -- Add highlight
                         self:AddHighlight(otherCharacter)
                         
-                        -- Start timer for exact counter duration (17.5 seconds)
+                        -- Start timer for 4 seconds duration
                         self.Timers[otherCharacter] = tick()
                         
                         game:GetService("StarterGui"):SetCore("SendNotification", {
@@ -1118,8 +1145,8 @@ function Camlock:SetupKeybind()
                             Duration = 1.2,
                         })
                         
-                        -- Remove highlight after exact counter duration with fade
-                        task.delay(17.5, function()
+                        -- Remove highlight after 4 seconds with fade
+                        task.delay(4, function()
                             self:RemoveHighlight(otherCharacter, true)
                             game:GetService("StarterGui"):SetCore("SendNotification", {
                                 Title = "Counter Ended",
@@ -1159,7 +1186,9 @@ function Camlock:SetupKeybind()
         
         -- Disconnect all connections
         for _, conn in ipairs(self.Connections) do
-            conn:Disconnect()
+            if conn then
+                pcall(function() conn:Disconnect() end)
+            end
         end
         self.Connections = {}
         self.Highlights = {}
@@ -1177,7 +1206,7 @@ function Camlock:SetupKeybind()
     
     local counterESPToggle = ESPTab:Toggle({
         Title = "Counter ESP",
-        Desc = "Highlights enemies when they use counter moves",
+        Desc = "Highlights enemies when they use counter moves (4 seconds, Blue)",
         Value = ConfigManager:Get("CounterESPEnabled"),
         Callback = function(state)
             ConfigManager:Set("CounterESPEnabled", state)
@@ -1185,7 +1214,7 @@ function Camlock:SetupKeybind()
                 CounterESP:Start()
                 WindUI:Notify({
                     Title = "Counter ESP",
-                    Content = "Counter ESP activated",
+                    Content = "Counter ESP activated (4s Blue Highlight)",
                     Duration = 2,
                     Icon = "eye"
                 })
