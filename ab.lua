@@ -137,7 +137,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         Color = Color3.fromHex("#000000"),  -- Black color
         BorderColor = Color3.fromHex("#DC143C"),  -- Crimson border
         Radius = 10
-     })
+    })
 -- Snippet 2/4: AutoBlock Core Functions (UNTOUCHED)
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -418,8 +418,8 @@ function AutoBlock:Toggle()
     end
     return self.Enabled
     end
--- Snippet 3/4: Camlock System with ALL FIXES
--- Camlock System
+-- Snippet 3/4: REWRITTEN Camlock System with FIXED Toggling
+-- Camlock System - COMPLETELY REWRITTEN
 local Camlock = {
     Enabled = false,
     Target = nil,
@@ -427,16 +427,23 @@ local Camlock = {
     Connections = {},
     MobileButton = nil,
     TargetDisplay = nil,
-    ButtonState = "OFF",  -- Track button state
-    Locked = false,  -- Prevent accidental toggles
+    ButtonState = "OFF",
+    IsDragging = false,
+    IsDead = false,
     LastToggleTime = 0,
-    Cooldown = 0.5,  -- Cooldown between toggles
-    InputConnections = {},  -- Separate storage for input connections
-    IsDead = false,  -- Track if local player is dead
-    IsDragging = false  -- Track if button is being dragged
+    ToggleCooldown = 0.5,
+    KeybindConnection = nil,
+    InputService = game:GetService("UserInputService")
 }
 
--- Camlock Functions
+-- FIXED: Proper input detection with GUI check
+function Camlock:IsGUIBlockingInput()
+    local guiService = game:GetService("GuiService")
+    local selectedObject = guiService.SelectedObject
+    return selectedObject ~= nil
+end
+
+-- Find closest target in camera FOV
 function Camlock:FindClosestTarget()
     local camera = workspace.CurrentCamera
     local closest = nil
@@ -452,7 +459,10 @@ function Camlock:FindClosestTarget()
                 -- Check if target is in front of camera
                 local screenPoint, onScreen = camera:WorldToViewportPoint(humanoidRootPart.Position)
                 if onScreen then
-                    local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)).Magnitude
+                    local center = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
+                    local targetPos = Vector2.new(screenPoint.X, screenPoint.Y)
+                    local distance = (targetPos - center).Magnitude
+                    
                     if distance < closestDistance then
                         closestDistance = distance
                         closest = player
@@ -465,35 +475,22 @@ function Camlock:FindClosestTarget()
     return closest
 end
 
+-- Add red highlight to target
 function Camlock:AddTargetHighlight()
     if self.Target and self.Target.Character and not self.TargetHighlight then
-        -- Remove any existing highlights first
-        if self.TargetHighlight then
-            self.TargetHighlight:Destroy()
-        end
-        
         local highlight = Instance.new("Highlight")
         highlight.Name = "CamlockHighlight"
-        highlight.FillColor = Color3.fromRGB(255, 50, 50) -- Red color
+        highlight.FillColor = Color3.fromRGB(255, 50, 50)
         highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
         highlight.FillTransparency = 0.3
         highlight.OutlineTransparency = 0
+        highlight.Adornee = self.Target.Character
         highlight.Parent = self.Target.Character
         self.TargetHighlight = highlight
-        
-        -- Listen for character removal
-        local charConn
-        charConn = self.Target.Character.AncestryChanged:Connect(function()
-            if not self.Target.Character or not self.Target.Character.Parent then
-                charConn:Disconnect()
-                self:Stop()
-            end
-        end)
-        
-        table.insert(self.Connections, charConn)
     end
 end
 
+-- Remove target highlight
 function Camlock:RemoveTargetHighlight()
     if self.TargetHighlight then
         self.TargetHighlight:Destroy()
@@ -501,48 +498,7 @@ function Camlock:RemoveTargetHighlight()
     end
 end
 
-function Camlock:UpdateMobileButtonText()
-    if self.MobileButton and self.MobileButton:FindFirstChild("CamlockButton") then
-        local button = self.MobileButton.CamlockButton
-        button.Text = "CAMLOCK " .. self.ButtonState
-        -- Update button color based on state
-        if self.ButtonState == "ON" then
-            button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            button.BorderColor3 = Color3.fromRGB(255, 50, 50)
-        else
-            button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            button.BorderColor3 = Color3.fromRGB(255, 50, 50)
-        end
-    end
-end
-
-function Camlock:ValidateTarget()
-    if not self.Target or not self.Target.Character then
-        return false
-    end
-    
-    local character = self.Target.Character
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character:FindFirstChild("Humanoid")
-    
-    if not humanoidRootPart or not humanoid or humanoid.Health <= 0 then
-        return false
-    end
-    
-    -- Check if target is within reasonable distance
-    local localChar = LocalPlayer.Character
-    if not localChar or not localChar:FindFirstChild("HumanoidRootPart") then
-        return false
-    end
-    
-    local distance = (localChar.HumanoidRootPart.Position - humanoidRootPart.Position).Magnitude
-    if distance > 500 then  -- Max lock distance
-        return false
-    end
-    
-    return true
-end
-
+-- Check if local player is dead
 function Camlock:CheckLocalPlayerDeath()
     local character = LocalPlayer.Character
     if not character then
@@ -560,73 +516,139 @@ function Camlock:CheckLocalPlayerDeath()
     return false
 end
 
-function Camlock:Start(target)
+-- Validate target
+function Camlock:ValidateTarget()
+    if not self.Target or not self.Target.Character then
+        return false
+    end
+    
+    local character = self.Target.Character
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChild("Humanoid")
+    
+    if not humanoidRootPart or not humanoid or humanoid.Health <= 0 then
+        return false
+    end
+    
+    return true
+end
+
+-- Create target display
+function Camlock:CreateTargetDisplay()
+    if self.TargetDisplay then return end
+    
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "CamlockTargetDisplay"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.IgnoreGuiInset = true
+    
+    local frame = Instance.new("Frame")
+    frame.Name = "TargetFrame"
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BackgroundTransparency = 0.5
+    frame.Size = UDim2.new(0, 300, 0, 80)
+    frame.Position = UDim2.new(0.5, -150, 0, 10)
+    frame.BorderSizePixel = 0
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "TargetName"
+    nameLabel.Text = ""
+    nameLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 18
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    nameLabel.Parent = frame
+    
+    local infoLabel = Instance.new("TextLabel")
+    infoLabel.Name = "TargetInfo"
+    infoLabel.Text = ""
+    infoLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    infoLabel.Font = Enum.Font.Gotham
+    infoLabel.TextSize = 14
+    infoLabel.BackgroundTransparency = 1
+    infoLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    infoLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    infoLabel.TextStrokeTransparency = 0.5
+    infoLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    infoLabel.Parent = frame
+    
+    frame.Parent = screenGui
+    screenGui.Parent = game:GetService("CoreGui")
+    self.TargetDisplay = screenGui
+end
+
+-- Update target display
+function Camlock:UpdateTargetDisplay()
+    if not self.TargetDisplay or not self.Target or not self.Target.Character then return end
+    
+    local character = self.Target.Character
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChild("Humanoid")
+    
+    if not humanoidRootPart or not humanoid then return end
+    
+    local health = math.floor(humanoid.Health)
+    local maxHealth = math.floor(humanoid.MaxHealth)
+    
+    local localChar = LocalPlayer.Character
+    local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
+    local distance = localRoot and math.floor((localRoot.Position - humanoidRootPart.Position).Magnitude) or 0
+    
+    local frame = self.TargetDisplay:FindFirstChild("TargetFrame")
+    if frame then
+        frame.TargetName.Text = self.Target.Name
+        frame.TargetInfo.Text = string.format("Health: %d/%d | Distance: %d studs", health, maxHealth, distance)
+    end
+end
+
+-- Clear target display
+function Camlock:ClearTargetDisplay()
+    if self.TargetDisplay and self.TargetDisplay:FindFirstChild("TargetFrame") then
+        local frame = self.TargetDisplay.TargetFrame
+        frame.TargetName.Text = ""
+        frame.TargetInfo.Text = ""
+    end
+end
+
+-- Start camlock
+function Camlock:Start()
     if self.Enabled then return end
     
-    self.Enabled = true
-    self.Locked = true  -- Prevent accidental toggles
-    self.Target = target or self:FindClosestTarget()
-    
-    if not self.Target then
-        self.Enabled = false
-        self.Locked = false
-        return
+    local target = self:FindClosestTarget()
+    if not target then
+        WindUI:Notify({
+            Title = "Camlock",
+            Content = "No target found in camera FOV",
+            Duration = 2,
+            Icon = "alert-triangle"
+        })
+        return false
     end
     
-    -- Reset death state
-    self.IsDead = false
+    self.Target = target
+    self.Enabled = true
+    self.ButtonState = "ON"
     
-    -- Add red highlight to target
+    -- Add highlight
     self:AddTargetHighlight()
     
-    -- Create target display
-    if not self.TargetDisplay then
-        self.TargetDisplay = Instance.new("ScreenGui")
-        self.TargetDisplay.Name = "CamlockTargetDisplay"
-        self.TargetDisplay.ResetOnSpawn = false
-        self.TargetDisplay.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        
-        local frame = Instance.new("Frame")
-        frame.Name = "TargetFrame"
-        frame.BackgroundTransparency = 1
-        frame.Size = UDim2.new(0, 300, 0, 80)
-        frame.Position = UDim2.new(0.5, -150, 0, 10)
-        frame.Parent = self.TargetDisplay
-        
-        local nameLabel = Instance.new("TextLabel")
-        nameLabel.Name = "TargetName"
-        nameLabel.Text = ""
-        nameLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-        nameLabel.Font = Enum.Font.GothamBold
-        nameLabel.TextSize = 18
-        nameLabel.BackgroundTransparency = 1
-        nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
-        nameLabel.Position = UDim2.new(0, 0, 0, 0)
-        nameLabel.TextStrokeTransparency = 0.5
-        nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        nameLabel.Parent = frame
-        
-        local infoLabel = Instance.new("TextLabel")
-        infoLabel.Name = "TargetInfo"
-        infoLabel.Text = ""
-        infoLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
-        infoLabel.Font = Enum.Font.Gotham
-        infoLabel.TextSize = 14
-        infoLabel.BackgroundTransparency = 1
-        infoLabel.Size = UDim2.new(1, 0, 0.5, 0)
-        infoLabel.Position = UDim2.new(0, 0, 0.5, 0)
-        infoLabel.TextStrokeTransparency = 0.5
-        infoLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        infoLabel.Parent = frame
-        
-        self.TargetDisplay.Parent = game:GetService("CoreGui")
-    end
+    -- Create display
+    self:CreateTargetDisplay()
     
-    -- Main camlock loop with death check
-    local conn = RunService.Heartbeat:Connect(function()
+    -- Main camlock loop
+    local heartbeatConn = RunService.Heartbeat:Connect(function()
         if not self.Enabled then return end
         
-        -- Check if local player died
+        -- Check death
         if self:CheckLocalPlayerDeath() then
             self:Stop()
             return
@@ -643,65 +665,64 @@ function Camlock:Start(target)
         
         if humanoidRootPart then
             local camera = workspace.CurrentCamera
-            -- Smooth camera movement
+            -- Smooth camera lock
             local targetCFrame = CFrame.new(camera.CFrame.Position, humanoidRootPart.Position)
             camera.CFrame = camera.CFrame:Lerp(targetCFrame, 0.5)
             
-            -- Update target display
-            if self.TargetDisplay and self.TargetDisplay:FindFirstChild("TargetFrame") then
-                local frame = self.TargetDisplay.TargetFrame
-                local humanoid = character:FindFirstChild("Humanoid")
-                local health = humanoid and math.floor(humanoid.Health) or 0
-                local maxHealth = humanoid and math.floor(humanoid.MaxHealth) or 100
-                
-                local localChar = LocalPlayer.Character
-                local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
-                local distance = localRoot and math.floor((localRoot.Position - humanoidRootPart.Position).Magnitude) or 0
-                
-                frame.TargetName.Text = self.Target.Name
-                frame.TargetInfo.Text = string.format("Health: %d/%d | Distance: %d studs", 
-                    health, maxHealth, distance)
-            end
+            -- Update display
+            self:UpdateTargetDisplay()
         else
             self:Stop()
         end
     end)
     
-    table.insert(self.Connections, conn)
+    table.insert(self.Connections, heartbeatConn)
     
-    -- Add target cleanup connection
-    local cleanupConn = self.Target.CharacterAdded:Connect(function()
+    -- Handle target respawn
+    local charAddedConn = self.Target.CharacterAdded:Connect(function(newChar)
+        task.wait(1) -- Wait for character to load
         if self.Enabled then
-            task.wait(1) -- Wait for character to load
             self:AddTargetHighlight()
         end
     end)
     
-    local removalConn = self.Target.CharacterRemoving:Connect(function()
+    local charRemovingConn = self.Target.CharacterRemoving:Connect(function()
         if self.Enabled then
             self:Stop()
         end
     end)
     
-    table.insert(self.Connections, cleanupConn)
-    table.insert(self.Connections, removalConn)
+    table.insert(self.Connections, charAddedConn)
+    table.insert(self.Connections, charRemovingConn)
     
-    self.Locked = false
+    -- Update mobile button if exists
+    self:UpdateMobileButtonText()
+    
+    WindUI:Notify({
+        Title = "Camlock",
+        Content = "Camlock activated on " .. self.Target.Name,
+        Duration = 2,
+        Icon = "crosshair"
+    })
+    
+    return true
 end
 
+-- Stop camlock
 function Camlock:Stop()
     if not self.Enabled then return end
     
     self.Enabled = false
-    self.Locked = true
+    self.ButtonState = "OFF"
+    self.Target = nil
     
-    -- Remove target highlight
+    -- Remove highlight
     self:RemoveTargetHighlight()
     
-    -- Clear target display
+    -- Clear display
     self:ClearTargetDisplay()
     
-    -- Disconnect all connections
+    -- Disconnect connections
     for _, conn in ipairs(self.Connections) do
         if conn then
             pcall(function() conn:Disconnect() end)
@@ -709,70 +730,37 @@ function Camlock:Stop()
     end
     self.Connections = {}
     
-    -- Disconnect input connections
-    for _, conn in ipairs(self.InputConnections) do
-        if conn then
-            pcall(function() conn:Disconnect() end)
-        end
-    end
-    self.InputConnections = {}
+    -- Update mobile button
+    self:UpdateMobileButtonText()
     
-    self.Target = nil
-    self.Locked = false
+    WindUI:Notify({
+        Title = "Camlock",
+        Content = "Camlock deactivated",
+        Duration = 2,
+        Icon = "crosshair"
+    })
 end
 
+-- Toggle camlock with cooldown
 function Camlock:Toggle()
     local currentTime = tick()
-    
-    -- Prevent rapid toggling
-    if currentTime - self.LastToggleTime < self.Cooldown then
-        return self.Enabled
-    end
-    
-    -- Prevent toggling when locked
-    if self.Locked then
+    if currentTime - self.LastToggleTime < self.ToggleCooldown then
         return self.Enabled
     end
     
     self.LastToggleTime = currentTime
     
     if self.Enabled then
-        -- Turn OFF
         self:Stop()
-        self.ButtonState = "OFF"
         return false
     else
-        -- Turn ON
-        local target = self:FindClosestTarget()
-        if target then
-            self:Start(target)
-            self.ButtonState = "ON"
-            return true
-        else
-            return false
-        end
+        return self:Start()
     end
 end
 
-function Camlock:ClearTargetDisplay()
-    if self.TargetDisplay and self.TargetDisplay:FindFirstChild("TargetFrame") then
-        self.TargetDisplay.TargetFrame.TargetName.Text = ""
-        self.TargetDisplay.TargetFrame.TargetInfo.Text = ""
-    end
-end
-
+-- Create mobile button
 function Camlock:CreateMobileButton()
-    if self.MobileButton then
-        self:RemoveMobileButton()
-    end
-    
-    -- Clear any previous input connections
-    for _, conn in ipairs(self.InputConnections) do
-        if conn then
-            pcall(function() conn:Disconnect() end)
-        end
-    end
-    self.InputConnections = {}
+    if self.MobileButton then return end
     
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "MobileCamlockButton"
@@ -790,159 +778,138 @@ function Camlock:CreateMobileButton()
     button.BorderColor3 = Color3.fromRGB(255, 50, 50)
     button.BorderSizePixel = 2
     button.AutoButtonColor = false
-    
-    -- Add curved borders
-    local uICorner = Instance.new("UICorner")
-    uICorner.CornerRadius = UDim.new(0, 8) -- Curved corners
-    uICorner.Parent = button
-    
     button.Size = UDim2.new(0, 120, 0, 40)
     button.Position = UDim2.new(1, -130, 0.5, -20)
-    button.Parent = screenGui
     
-    -- Make draggable with proper dragging logic
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = button
+    
+    -- Dragging logic
     local dragging = false
     local dragStart, startPos
     
-    -- Handle drag start for mouse
     button.MouseButton1Down:Connect(function()
         dragging = true
         self.IsDragging = true
-        dragStart = Vector2.new(game:GetService("UserInputService"):GetMouseLocation().X, game:GetService("UserInputService"):GetMouseLocation().Y)
+        dragStart = Vector2.new(self.InputService:GetMouseLocation().X, self.InputService:GetMouseLocation().Y)
         startPos = button.Position
     end)
     
-    -- Handle drag start for touch
-    button.TouchLongPress:Connect(function(touchPos)
-        dragging = true
-        self.IsDragging = true
-        dragStart = touchPos
-        startPos = button.Position
-    end)
-    
-    -- Function to end drag
-    local function endDrag()
-        dragging = false
-        self.IsDragging = false
-    end
-    
-    -- Handle drag end for mouse
-    local mouseUpConnection = game:GetService("UserInputService").InputEnded:Connect(function(input)
+    local mouseUpConn = self.InputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            endDrag()
+            dragging = false
+            self.IsDragging = false
         end
     end)
-    table.insert(self.InputConnections, mouseUpConnection)
     
-    -- Handle drag end for touch
-    local touchEndConnection = game:GetService("UserInputService").TouchEnded:Connect(endDrag)
-    table.insert(self.InputConnections, touchEndConnection)
-    
-    -- Update position while dragging
-    local dragConnection = RunService.Heartbeat:Connect(function()
+    local dragConn = RunService.Heartbeat:Connect(function()
         if dragging then
-            local inputService = game:GetService("UserInputService")
-            local currentPos
-            
-            if inputService.MouseEnabled and inputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-                currentPos = Vector2.new(inputService:GetMouseLocation().X, inputService:GetMouseLocation().Y)
-            elseif inputService.TouchEnabled then
-                local touch = inputService:GetTouchInputs()[1]
-                if touch then
-                    currentPos = Vector2.new(touch.Position.X, touch.Position.Y)
-                end
-            end
-            
-            if currentPos then
-                local delta = currentPos - dragStart
-                button.Position = UDim2.new(
-                    startPos.X.Scale, 
-                    startPos.X.Offset + delta.X,
-                    startPos.Y.Scale, 
-                    startPos.Y.Offset + delta.Y
-                )
-            end
+            local currentPos = Vector2.new(self.InputService:GetMouseLocation().X, self.InputService:GetMouseLocation().Y)
+            local delta = currentPos - dragStart
+            button.Position = UDim2.new(
+                startPos.X.Scale, 
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale, 
+                startPos.Y.Offset + delta.Y
+            )
         end
     end)
     
-    table.insert(self.InputConnections, dragConnection)
+    -- Click handler with cooldown
+    local lastClick = 0
+    local clickCooldown = 0.3
     
-    -- Button functionality with debounce
-    local lastClickTime = 0
-    local clickCooldown = 0.5
-    
-    local function handleCamlockToggle()
-        -- Check if we're dragging
-        if self.IsDragging then
-            return
-        end
+    button.MouseButton1Click:Connect(function()
+        if self.IsDragging then return end
         
         local currentTime = tick()
-        if currentTime - lastClickTime > clickCooldown then
-            lastClickTime = currentTime
-            
-            -- Toggle camlock
-            local wasEnabled = self.Enabled
-            local newState = self:Toggle()
-            
-            if newState ~= wasEnabled then
-                -- Update mobile button text
-                self:UpdateMobileButtonText()
-                
-                -- Update UI toggle if it exists
-                if camlockToggle then
-                    camlockToggle:SetValue(newState)
-                end
-                
-                -- Update config
-                ConfigManager:Set("CamlockEnabled", newState)
-                
-                WindUI:Notify({
-                    Title = "Camlock",
-                    Content = newState and "Camlock activated" or "Camlock deactivated",
-                    Duration = 1.5,
-                    Icon = "crosshair"
-                })
+        if currentTime - lastClick > clickCooldown then
+            lastClick = currentTime
+            self:Toggle()
+            ConfigManager:Set("CamlockEnabled", self.Enabled)
+            if camlockToggle then
+                camlockToggle:SetValue(self.Enabled)
             end
         end
-    end
-    
-    -- Connect click events directly to button only
-    button.MouseButton1Click:Connect(function()
-        if not self.IsDragging then
-            handleCamlockToggle()
-        end
     end)
     
-    button.TouchTap:Connect(function()
-        if not self.IsDragging then
-            handleCamlockToggle()
-        end
-    end)
-    
+    button.Parent = screenGui
     screenGui.Parent = game:GetService("CoreGui")
     self.MobileButton = screenGui
-    self:UpdateMobileButtonText()
+    
+    -- Store connections for cleanup
+    table.insert(self.Connections, mouseUpConn)
+    table.insert(self.Connections, dragConn)
 end
 
-function Camlock:RemoveMobileButton()
-    -- Disconnect input connections first
-    for _, conn in ipairs(self.InputConnections) do
-        if conn then
-            pcall(function() conn:Disconnect() end)
+-- Update mobile button text
+function Camlock:UpdateMobileButtonText()
+    if self.MobileButton and self.MobileButton:FindFirstChild("CamlockButton") then
+        local button = self.MobileButton.CamlockButton
+        button.Text = "CAMLOCK " .. self.ButtonState
+        
+        if self.ButtonState == "ON" then
+            button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            button.BorderColor3 = Color3.fromRGB(255, 50, 50)
+        else
+            button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            button.BorderColor3 = Color3.fromRGB(255, 50, 50)
         end
     end
-    self.InputConnections = {}
-    
-    -- Remove the button
+end
+
+-- Remove mobile button
+function Camlock:RemoveMobileButton()
     if self.MobileButton then
         self.MobileButton:Destroy()
         self.MobileButton = nil
     end
-    
-    -- Reset dragging state
-    self.IsDragging = false
+end
+
+-- Setup keybind
+function Camlock:SetupKeybind()
+    if self.KeybindConnection then
+        self.KeybindConnection:Disconnect()
     end
+    
+    self.KeybindConnection = self.InputService.InputBegan:Connect(function(input, processed)
+        -- FIXED: Check if GUI is blocking input
+        if processed or self:IsGUIBlockingInput() then
+            return
+        end
+        
+        if input.KeyCode.Name == ConfigManager:Get("CamlockKeybind") then
+            local currentTime = tick()
+            if currentTime - self.LastToggleTime < self.ToggleCooldown then
+                return
+            end
+            
+            self.LastToggleTime = currentTime
+            
+            local wasEnabled = self.Enabled
+            local newState = self:Toggle()
+            
+            if newState ~= wasEnabled then
+                ConfigManager:Set("CamlockEnabled", newState)
+                if camlockToggle then
+                    camlockToggle:SetValue(newState)
+                end
+            end
+        end
+    end)
+end
+
+-- Escape key handler
+local escapeConn = game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.Escape and Camlock.Enabled then
+        Camlock:Stop()
+        ConfigManager:Set("CamlockEnabled", false)
+        if camlockToggle then
+            camlockToggle:SetValue(false)
+        end
+    end
+end)
 -- Snippet 4/4: UI Setup and Final Initialization with FIXES
     -- Create Tabs with better styling
     local CombatTab = Window:Tab({
@@ -1126,40 +1093,13 @@ function Camlock:RemoveMobileButton()
             ConfigManager:Set("CamlockEnabled", state)
             
             if state then
-                -- Only start if toggle is ON
-                local target = Camlock:FindClosestTarget()
-                if target then
-                    Camlock.ButtonState = "ON"
-                    Camlock:Start(target)
-                    Camlock:UpdateMobileButtonText()
-                    WindUI:Notify({
-                        Title = "Camlock",
-                        Content = "Camlock activated on " .. target.Name,
-                        Duration = 2,
-                        Icon = "crosshair"
-                    })
-                else
-                    -- No target found, revert toggle
+                local success = Camlock:Start()
+                if not success then
                     ConfigManager:Set("CamlockEnabled", false)
                     camlockToggle:SetValue(false)
-                    WindUI:Notify({
-                        Title = "Camlock",
-                        Content = "No target found in camera FOV",
-                        Duration = 2,
-                        Icon = "alert-triangle"
-                    })
                 end
             else
-                -- Turn OFF
                 Camlock:Stop()
-                Camlock.ButtonState = "OFF"
-                Camlock:UpdateMobileButtonText()
-                WindUI:Notify({
-                    Title = "Camlock",
-                    Content = "Camlock deactivated",
-                    Duration = 2,
-                    Icon = "crosshair"
-                })
             end
         end
     })
@@ -1181,15 +1121,15 @@ function Camlock:RemoveMobileButton()
             ConfigManager:Set("CamlockKeybind", key)
             keybindButton:SetTitle("Change Keybind (Currently: " .. key .. ")")
             
+            -- Re-setup keybind with new key
+            Camlock:SetupKeybind()
+            
             WindUI:Notify({
                 Title = "Keybind Updated",
                 Content = "Camlock keybind set to: " .. key,
                 Duration = 3,
                 Icon = "check"
             })
-            
-            -- Re-setup keybind
-            setupKeybind()
         end
     })
     
@@ -1219,7 +1159,7 @@ function Camlock:RemoveMobileButton()
         end
     })
     
-    -- Settings Tab Elements (without emojis)
+    -- Settings Tab Elements
     SettingsTab:Section({
         Title = "Settings Management",
         Desc = "Save and load your settings"
@@ -1265,13 +1205,6 @@ function Camlock:RemoveMobileButton()
             
             if Camlock.Enabled then
                 Camlock:Stop()
-                if defaultConfig.CamlockEnabled then
-                    local target = Camlock:FindClosestTarget()
-                    if target then
-                        Camlock.Target = target
-                        Camlock:Start()
-                    end
-                end
             end
             
             if Camlock.MobileButton and not defaultConfig.MobileCamlockButton then
@@ -1279,6 +1212,9 @@ function Camlock:RemoveMobileButton()
             elseif not Camlock.MobileButton and defaultConfig.MobileCamlockButton then
                 Camlock:CreateMobileButton()
             end
+            
+            -- Re-setup keybind
+            Camlock:SetupKeybind()
             
             WindUI:Notify({
                 Title = "Success",
@@ -1361,83 +1297,12 @@ function Camlock:RemoveMobileButton()
         end
     })
     
-    -- Fixed keybind handler for camlock with better control
-    local keybindConnection
-    local lastKeybindTime = 0
-    local keybindCooldown = 0.5
-    
-    -- Function to setup keybind
-    local function setupKeybind()
-        -- Disconnect previous connection if exists
-        if keybindConnection then
-            keybindConnection:Disconnect()
-            keybindConnection = nil
-        end
-        
-        -- Create new connection
-        keybindConnection = game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
-            -- Only process if not processed by GUI and key matches
-            if not processed and input.KeyCode.Name == ConfigManager:Get("CamlockKeybind") then
-                local currentTime = tick()
-                if currentTime - lastKeybindTime > keybindCooldown then
-                    lastKeybindTime = currentTime
-                    
-                    -- Toggle camlock
-                    local wasEnabled = Camlock.Enabled
-                    local newState = Camlock:Toggle()
-                    
-                    if newState ~= wasEnabled then
-                        -- Update mobile button text
-                        Camlock:UpdateMobileButtonText()
-                        
-                        -- Update UI toggle
-                        if camlockToggle then
-                            camlockToggle:SetValue(newState)
-                        end
-                        
-                        -- Update config
-                        ConfigManager:Set("CamlockEnabled", newState)
-                        
-                        WindUI:Notify({
-                            Title = "Camlock",
-                            Content = newState and "Camlock activated" or "Camlock deactivated",
-                            Duration = 1.5,
-                            Icon = "crosshair"
-                        })
-                    end
-                end
-            end
-        end)
-    end
-    
     -- Initialize keybind
-    setupKeybind()
-    
-    -- Escape key handler
-    game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
-        if not processed and input.KeyCode == Enum.KeyCode.Escape then
-            -- Escape key can be used to force stop camlock if needed
-            if Camlock.Enabled then
-                Camlock:Stop()
-                Camlock.ButtonState = "OFF"
-                Camlock:UpdateMobileButtonText()
-                ConfigManager:Set("CamlockEnabled", false)
-                if camlockToggle then
-                    camlockToggle:SetValue(false)
-                end
-                WindUI:Notify({
-                    Title = "Camlock",
-                    Content = "Camlock force stopped",
-                    Duration = 2,
-                    Icon = "alert-triangle"
-                })
-            end
-        end
-    end)
+    Camlock:SetupKeybind()
     
     -- Initialize based on saved state
     task.spawn(function()
-        task.wait(1) -- Wait for game to load
+        task.wait(1)
         
         -- Initialize auto block
         if ConfigManager:Get("AutoBlockEnabled") then
@@ -1452,13 +1317,8 @@ function Camlock:RemoveMobileButton()
         
         -- Initialize camlock
         if ConfigManager:Get("CamlockEnabled") then
-            local target = Camlock:FindClosestTarget()
-            if target then
-                Camlock.Target = target
-                Camlock:Start()
-                Camlock.ButtonState = "ON"
-                Camlock:UpdateMobileButtonText()
-            else
+            local success = Camlock:Start()
+            if not success then
                 ConfigManager:Set("CamlockEnabled", false)
                 if camlockToggle then
                     camlockToggle:SetValue(false)
@@ -1474,21 +1334,20 @@ function Camlock:RemoveMobileButton()
     
     -- Add custom UI elements to window (v1.0 label and social icons)
     local function addCustomUIElements()
-        task.wait(0.5) -- Wait for window to fully load
+        task.wait(0.5)
         local coreGui = game:GetService("CoreGui")
         
-        -- Find the WindUI window
         for _, gui in pairs(coreGui:GetChildren()) do
             if gui.Name == "WindUI" then
                 local combatGUI = gui:FindFirstChild("CombatGUI")
                 if combatGUI then
                     local titleBar = combatGUI:FindFirstChild("TitleBar")
                     if titleBar then
-                        -- Add version label (crimson color)
+                        -- Add version label
                         local versionLabel = Instance.new("TextLabel")
                         versionLabel.Name = "VersionLabel"
                         versionLabel.Text = "v1.0"
-                        versionLabel.TextColor3 = Color3.fromRGB(220, 50, 50) -- Crimson color
+                        versionLabel.TextColor3 = Color3.fromRGB(220, 50, 50)
                         versionLabel.Font = Enum.Font.GothamBold
                         versionLabel.TextSize = 12
                         versionLabel.BackgroundTransparency = 1
@@ -1507,7 +1366,7 @@ function Camlock:RemoveMobileButton()
                         -- YouTube icon
                         local youtubeButton = Instance.new("ImageButton")
                         youtubeButton.Name = "YouTubeIcon"
-                        youtubeButton.Image = "rbxassetid://108320733835485" -- YouTube icon
+                        youtubeButton.Image = "rbxassetid://108320733835485"
                         youtubeButton.BackgroundTransparency = 1
                         youtubeButton.Size = UDim2.new(0, 25, 0, 25)
                         youtubeButton.Position = UDim2.new(0, 0, 0, 2)
@@ -1516,7 +1375,7 @@ function Camlock:RemoveMobileButton()
                         -- Discord icon
                         local discordButton = Instance.new("ImageButton")
                         discordButton.Name = "DiscordIcon"
-                        discordButton.Image = "rbxassetid://119731774091515" -- Discord icon
+                        discordButton.Image = "rbxassetid://119731774091515"
                         discordButton.BackgroundTransparency = 1
                         discordButton.Size = UDim2.new(0, 25, 0, 25)
                         discordButton.Position = UDim2.new(0, 35, 0, 2)
