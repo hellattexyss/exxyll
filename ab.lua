@@ -13,12 +13,13 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         AutoBlockEnabled = false,
         AutoBlockCloseRange = 14,
         AutoBlockLongRange = 35,
-        CounterNotifierEnabled = false,
+        CounterESPEnabled = false,
         CounterRange = 20, -- Hardcoded for counter detection
         M1AfterBlockEnabled = false,
         CamlockEnabled = false,
         CamlockKeybind = "Q",
         MobileCamlockButton = false,
+        DeathCounterESPEnabled = false,
         CloseRangeMoves = {
             "rbxassetid://16552234590", "rbxassetid://17889290569", "rbxassetid://17889461810", "rbxassetid://17889458563",
             "rbxassetid://17889471098", "rbxassetid://16515448089", "rbxassetid://16515520431", "rbxassetid://16515503507",
@@ -138,7 +139,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         BorderColor = Color3.fromHex("#DC143C"),  -- Crimson border
         Radius = 10
     })
--- Snippet 2/4: AutoBlock Core Functions (UNTOUCHED)
+-- Snippet 2/4: AutoBlock Core Functions (Counter ESP Removed)
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -207,91 +208,6 @@ function AutoBlock:ReleaseM1()
                 Mobile = true,
             },
         }))
-    end
-end
-
--- Counter Detection Functions from original script
-function AutoBlock:AddCounterHighlight(character, color)
-    if not self.CounterHighlights[character] then
-        local highlight = Instance.new("Highlight")
-        highlight.FillColor = color
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.FillTransparency = 0.5
-        highlight.OutlineTransparency = 0
-        highlight.Parent = character
-        self.CounterHighlights[character] = highlight
-    end
-end
-
-function AutoBlock:RemoveCounterHighlight(character)
-    local highlight = self.CounterHighlights[character]
-    if highlight then
-        highlight:Destroy()
-        self.CounterHighlights[character] = nil
-    end
-end
-
-function AutoBlock:GetCounterAnimation(humanoid)
-    local whiteCounter = ConfigManager:Get("WhiteCounterAnimation")
-    local blueCounter = ConfigManager:Get("BlueCounterAnimation")
-    
-    for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-        if track.Animation then
-            local animId = track.Animation.AnimationId
-            if animId == whiteCounter or animId == blueCounter then
-                return animId
-            end
-        end
-    end
-    return nil
-end
-
-function AutoBlock:CheckCounterMoves()
-    if not ConfigManager:Get("CounterNotifierEnabled") then return end
-    
-    local character = LocalPlayer.Character
-    if not character then return end
-    
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-    
-    local counterRange = ConfigManager:Get("CounterRange")
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local otherCharacter = player.Character
-            local otherRootPart = otherCharacter:FindFirstChild("HumanoidRootPart")
-            local otherHumanoid = otherCharacter:FindFirstChild("Humanoid")
-            
-            if otherRootPart and otherHumanoid and (rootPart.Position - otherRootPart.Position).Magnitude <= counterRange then
-                local counterAnimation = self:GetCounterAnimation(otherHumanoid)
-                if counterAnimation then
-                    local currentTime = tick()
-                    if not self.CounterNotifierCooldowns[player] or 5 < currentTime - self.CounterNotifierCooldowns[player] then
-                        self.CounterNotifierCooldowns[player] = currentTime
-                        local highlightColor = counterAnimation == ConfigManager:Get("WhiteCounterAnimation") and 
-                            Color3.fromRGB(240, 240, 240) or Color3.fromRGB(0, 0, 254)
-                        
-                        self:AddCounterHighlight(otherCharacter, highlightColor)
-                        
-                        game:GetService("StarterGui"):SetCore("SendNotification", {
-                            Title = "Counter Detected!",
-                            Text = player.Name .. " used a counter move",
-                            Duration = 1.2,
-                        })
-                        
-                        task.delay(17.5, function()
-                            self:RemoveCounterHighlight(otherCharacter)
-                            game:GetService("StarterGui"):SetCore("SendNotification", {
-                                Title = "Counter Ended",
-                                Text = player.Name .. "'s counter move cooldown has ended",
-                                Duration = 2,
-                            })
-                        end)
-                    end
-                end
-            end
-        end
     end
 end
 
@@ -374,14 +290,6 @@ function AutoBlock:Start()
     end)
     
     table.insert(self.Connections, heartbeatConn)
-    
-    -- Counter notifier heartbeat
-    if ConfigManager:Get("CounterNotifierEnabled") then
-        local counterConn = RunService.Heartbeat:Connect(function()
-            self:CheckCounterMoves()
-        end)
-        table.insert(self.Connections, counterConn)
-    end
 end
 
 function AutoBlock:Stop()
@@ -394,14 +302,6 @@ function AutoBlock:Stop()
         self:ReleaseBlockKey()
         self.Blocking = false
     end
-    
-    -- Clear all highlights
-    for character, highlight in pairs(self.CounterHighlights) do
-        if highlight then
-            highlight:Destroy()
-        end
-    end
-    self.CounterHighlights = {}
     
     -- Disconnect all connections
     for _, conn in ipairs(self.Connections) do
@@ -418,8 +318,8 @@ function AutoBlock:Toggle()
     end
     return self.Enabled
     end
--- Snippet 3/4: REWRITTEN Camlock System with FIXED Toggling
--- Camlock System - COMPLETELY REWRITTEN
+-- Snippet 3/4: REWRITTEN Camlock System with FIXED Mobile Button
+-- Camlock System - FIXED Mobile Button
 local Camlock = {
     Enabled = false,
     Target = nil,
@@ -433,10 +333,12 @@ local Camlock = {
     LastToggleTime = 0,
     ToggleCooldown = 0.5,
     KeybindConnection = nil,
-    InputService = game:GetService("UserInputService")
+    InputService = game:GetService("UserInputService"),
+    LastClickTime = 0,
+    ClickCooldown = 0.3
 }
 
--- FIXED: Proper input detection with GUI check
+-- Proper input detection
 function Camlock:IsGUIBlockingInput()
     local guiService = game:GetService("GuiService")
     local selectedObject = guiService.SelectedObject
@@ -533,7 +435,7 @@ function Camlock:ValidateTarget()
     return true
 end
 
--- Create target display
+-- Create target display (SMALLER and LOWER on screen)
 function Camlock:CreateTargetDisplay()
     if self.TargetDisplay then return end
     
@@ -543,16 +445,17 @@ function Camlock:CreateTargetDisplay()
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.IgnoreGuiInset = true
     
+    -- Smaller frame positioned lower on screen
     local frame = Instance.new("Frame")
     frame.Name = "TargetFrame"
     frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     frame.BackgroundTransparency = 0.5
-    frame.Size = UDim2.new(0, 300, 0, 80)
-    frame.Position = UDim2.new(0.5, -150, 0, 10)
+    frame.Size = UDim2.new(0, 200, 0, 60)  -- Smaller size
+    frame.Position = UDim2.new(0.5, -100, 0.1, 0)  -- Lower position (10% from top)
     frame.BorderSizePixel = 0
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
     
     local nameLabel = Instance.new("TextLabel")
@@ -560,7 +463,7 @@ function Camlock:CreateTargetDisplay()
     nameLabel.Text = ""
     nameLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
     nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.TextSize = 18
+    nameLabel.TextSize = 14  -- Smaller text
     nameLabel.BackgroundTransparency = 1
     nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
     nameLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -573,7 +476,7 @@ function Camlock:CreateTargetDisplay()
     infoLabel.Text = ""
     infoLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
     infoLabel.Font = Enum.Font.Gotham
-    infoLabel.TextSize = 14
+    infoLabel.TextSize = 12  -- Smaller text
     infoLabel.BackgroundTransparency = 1
     infoLabel.Size = UDim2.new(1, 0, 0.5, 0)
     infoLabel.Position = UDim2.new(0, 0, 0.5, 0)
@@ -606,7 +509,7 @@ function Camlock:UpdateTargetDisplay()
     local frame = self.TargetDisplay:FindFirstChild("TargetFrame")
     if frame then
         frame.TargetName.Text = self.Target.Name
-        frame.TargetInfo.Text = string.format("Health: %d/%d | Distance: %d studs", health, maxHealth, distance)
+        frame.TargetInfo.Text = string.format("HP: %d/%d | Dist: %d", health, maxHealth, distance)
     end
 end
 
@@ -758,7 +661,7 @@ function Camlock:Toggle()
     end
 end
 
--- Create mobile button
+-- FIXED: Create mobile button with proper touch handling
 function Camlock:CreateMobileButton()
     if self.MobileButton then return end
     
@@ -779,13 +682,13 @@ function Camlock:CreateMobileButton()
     button.BorderSizePixel = 2
     button.AutoButtonColor = false
     button.Size = UDim2.new(0, 120, 0, 40)
-    button.Position = UDim2.new(1, -130, 0.5, -20)
+    button.Position = UDim2.new(1, -130, 0.5, -20)  -- Fixed position
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = button
     
-    -- Dragging logic
+    -- FIXED: Simple dragging logic with mouse only
     local dragging = false
     local dragStart, startPos
     
@@ -816,20 +719,29 @@ function Camlock:CreateMobileButton()
         end
     end)
     
-    -- Click handler with cooldown
-    local lastClick = 0
-    local clickCooldown = 0.3
-    
+    -- FIXED: Proper click handler - NO TOUCH HANDLING TO AVOID MULTI-TOUCH BUGS
     button.MouseButton1Click:Connect(function()
-        if self.IsDragging then return end
+        -- Don't toggle if we were dragging
+        if self.IsDragging then
+            self.IsDragging = false
+            return
+        end
         
         local currentTime = tick()
-        if currentTime - lastClick > clickCooldown then
-            lastClick = currentTime
-            self:Toggle()
-            ConfigManager:Set("CamlockEnabled", self.Enabled)
+        if currentTime - self.LastClickTime < self.ClickCooldown then
+            return
+        end
+        
+        self.LastClickTime = currentTime
+        
+        -- Toggle camlock
+        local wasEnabled = self.Enabled
+        local newState = self:Toggle()
+        
+        if newState ~= wasEnabled then
+            ConfigManager:Set("CamlockEnabled", newState)
             if camlockToggle then
-                camlockToggle:SetValue(self.Enabled)
+                camlockToggle:SetValue(newState)
             end
         end
     end)
@@ -874,7 +786,7 @@ function Camlock:SetupKeybind()
     end
     
     self.KeybindConnection = self.InputService.InputBegan:Connect(function(input, processed)
-        -- FIXED: Check if GUI is blocking input
+        -- Check if GUI is blocking input
         if processed or self:IsGUIBlockingInput() then
             return
         end
@@ -898,19 +810,8 @@ function Camlock:SetupKeybind()
             end
         end
     end)
-end
-
--- Escape key handler
-local escapeConn = game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == Enum.KeyCode.Escape and Camlock.Enabled then
-        Camlock:Stop()
-        ConfigManager:Set("CamlockEnabled", false)
-        if camlockToggle then
-            camlockToggle:SetValue(false)
-        end
     end
-end)
--- Snippet 4/4: UI Setup and Final Initialization with FIXES
+-- Snippet 4/4: UI Setup and Final Initialization with ESP Tab
     -- Create Tabs with better styling
     local CombatTab = Window:Tab({
         Title = "Combat",
@@ -921,6 +822,12 @@ end)
     local CamlockTab = Window:Tab({
         Title = "Camlock",
         Icon = "crosshair",
+        Locked = false,
+    })
+    
+    local ESPTab = Window:Tab({
+        Title = "ESP",
+        Icon = "eye",
         Locked = false,
     })
     
@@ -964,44 +871,6 @@ end)
                     Duration = 2,
                     Icon = "shield-off"
                 })
-            end
-        end
-    })
-    
-    local counterNotifierToggle = CombatTab:Toggle({
-        Title = "Counter Notifier",
-        Desc = "Highlights enemies when they use counter moves.",
-        Value = ConfigManager:Get("CounterNotifierEnabled"),
-        Callback = function(state)
-            ConfigManager:Set("CounterNotifierEnabled", state)
-            if state then
-                WindUI:Notify({
-                    Title = "Counter Notifier",
-                    Content = "Counter detection activated",
-                    Duration = 2,
-                    Icon = "eye"
-                })
-            else
-                WindUI:Notify({
-                    Title = "Counter Notifier",
-                    Content = "Counter detection deactivated",
-                    Duration = 2,
-                    Icon = "eye-off"
-                })
-            end
-            
-            if state and AutoBlock.Enabled then
-                -- Restart to include counter detection
-                AutoBlock:Stop()
-                AutoBlock:Start()
-            elseif not state and AutoBlock.Enabled then
-                -- Just remove counter highlights but keep auto block
-                for character, highlight in pairs(AutoBlock.CounterHighlights) do
-                    if highlight then
-                        highlight:Destroy()
-                    end
-                end
-                AutoBlock.CounterHighlights = {}
             end
         end
     })
@@ -1159,6 +1028,332 @@ end)
         end
     })
     
+    -- ESP Tab Elements (Counter ESP Moved Here)
+    ESPTab:Section({
+        Title = "ESP Systems",
+        Desc = "Visual indicators for enemy abilities"
+    })
+    
+    -- Counter ESP System (FIXED)
+    local CounterESP = {
+        Enabled = false,
+        Highlights = {},
+        Timers = {},
+        Connections = {}
+    }
+    
+    function CounterESP:GetCounterAnimation(humanoid)
+        local whiteCounter = ConfigManager:Get("WhiteCounterAnimation")
+        local blueCounter = ConfigManager:Get("BlueCounterAnimation")
+        
+        for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+            if track.Animation then
+                local animId = track.Animation.AnimationId
+                if animId == whiteCounter or animId == blueCounter then
+                    return animId
+                end
+            end
+        end
+        return nil
+    end
+    
+    function CounterESP:AddHighlight(character)
+        if not self.Highlights[character] then
+            local highlight = Instance.new("Highlight")
+            highlight.FillColor = Color3.fromRGB(255, 255, 255) -- WHITE only
+            highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
+            highlight.FillTransparency = 0.5
+            highlight.OutlineTransparency = 0
+            highlight.Parent = character
+            self.Highlights[character] = highlight
+        end
+    end
+    
+    function CounterESP:RemoveHighlight(character, fade)
+        local highlight = self.Highlights[character]
+        if highlight then
+            if fade then
+                -- Fade out effect
+                for i = 0.5, 1, 0.1 do
+                    highlight.FillTransparency = i
+                    highlight.OutlineTransparency = i
+                    task.wait(0.05)
+                end
+            end
+            highlight:Destroy()
+            self.Highlights[character] = nil
+        end
+        self.Timers[character] = nil
+    end
+    
+    function CounterESP:CheckCounters()
+        if not self.Enabled then return end
+        
+        local character = LocalPlayer.Character
+        if not character then return end
+        
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not rootPart then return end
+        
+        local counterRange = ConfigManager:Get("CounterRange")
+        
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local otherCharacter = player.Character
+                local otherRootPart = otherCharacter:FindFirstChild("HumanoidRootPart")
+                local otherHumanoid = otherCharacter:FindFirstChild("Humanoid")
+                
+                if otherRootPart and otherHumanoid and (rootPart.Position - otherRootPart.Position).Magnitude <= counterRange then
+                    local counterAnimation = self:GetCounterAnimation(otherHumanoid)
+                    if counterAnimation and not self.Timers[otherCharacter] then
+                        -- Add highlight
+                        self:AddHighlight(otherCharacter)
+                        
+                        -- Start timer for exact counter duration (17.5 seconds)
+                        self.Timers[otherCharacter] = tick()
+                        
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "Counter Detected!",
+                            Text = player.Name .. " used a counter move",
+                            Duration = 1.2,
+                        })
+                        
+                        -- Remove highlight after exact counter duration with fade
+                        task.delay(17.5, function()
+                            self:RemoveHighlight(otherCharacter, true)
+                            game:GetService("StarterGui"):SetCore("SendNotification", {
+                                Title = "Counter Ended",
+                                Text = player.Name .. "'s counter move cooldown has ended",
+                                Duration = 2,
+                            })
+                        end)
+                    end
+                end
+            end
+        end
+    end
+    
+    function CounterESP:Start()
+        if self.Enabled then return end
+        
+        self.Enabled = true
+        
+        local heartbeatConn = RunService.Heartbeat:Connect(function()
+            self:CheckCounters()
+        end)
+        
+        table.insert(self.Connections, heartbeatConn)
+    end
+    
+    function CounterESP:Stop()
+        if not self.Enabled then return end
+        
+        self.Enabled = false
+        
+        -- Remove all highlights with fade
+        for character, highlight in pairs(self.Highlights) do
+            if highlight then
+                self:RemoveHighlight(character, true)
+            end
+        end
+        
+        -- Disconnect all connections
+        for _, conn in ipairs(self.Connections) do
+            conn:Disconnect()
+        end
+        self.Connections = {}
+        self.Highlights = {}
+        self.Timers = {}
+    end
+    
+    function CounterESP:Toggle()
+        if self.Enabled then
+            self:Stop()
+        else
+            self:Start()
+        end
+        return self.Enabled
+    end
+    
+    local counterESPToggle = ESPTab:Toggle({
+        Title = "Counter ESP",
+        Desc = "Highlights enemies when they use counter moves",
+        Value = ConfigManager:Get("CounterESPEnabled"),
+        Callback = function(state)
+            ConfigManager:Set("CounterESPEnabled", state)
+            if state then
+                CounterESP:Start()
+                WindUI:Notify({
+                    Title = "Counter ESP",
+                    Content = "Counter ESP activated",
+                    Duration = 2,
+                    Icon = "eye"
+                })
+            else
+                CounterESP:Stop()
+                WindUI:Notify({
+                    Title = "Counter ESP",
+                    Content = "Counter ESP deactivated",
+                    Duration = 2,
+                    Icon = "eye-off"
+                })
+            end
+        end
+    })
+    
+    -- Death Counter ESP System
+    local DeathCounterESP = {
+        Enabled = false,
+        State = {},
+        Billboards = {},
+        Connections = {}
+    }
+    
+    local strongSkills = {
+        ["Omni Directional Punch"] = true,
+        ["Death Counter"] = true,
+        ["Serious Punch"] = true,
+        ["Table Flip"] = true
+    }
+    
+    local weakSkills = {
+        ["Consecutive Punches"] = true,
+        ["Normal Punch"] = true,
+        ["Shove"] = true,
+        ["Uppercut"] = true
+    }
+    
+    function DeathCounterESP:GetSkillType(backpack)
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if strongSkills[tool.Name] then return "strong" end
+            if weakSkills[tool.Name] then return "weak" end
+        end
+        return nil
+    end
+    
+    function DeathCounterESP:CreateBillboard(target, text)
+        if not (target and target:FindFirstChild("Head")) then return end
+        
+        local bb = target.Head:FindFirstChild("SkillTag") or Instance.new("BillboardGui")
+        bb.Name = "SkillTag"
+        bb.Size = UDim2.new(0, 100, 0, 40)
+        bb.StudsOffset = Vector3.new(0, 2.5, 0)
+        bb.Adornee = target.Head
+        bb.AlwaysOnTop = true
+        if not bb.Parent then bb.Parent = target.Head end
+
+        local label = bb:FindFirstChild("TextLabel") or Instance.new("TextLabel", bb)
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Font = Enum.Font.GothamBold
+        label.TextScaled = true
+        label.TextColor3 = Color3.new(1, 1, 1)
+        label.TextStrokeTransparency = 0.5
+        label.Text = text
+        
+        self.Billboards[target] = bb
+    end
+    
+    function DeathCounterESP:RemoveBillboard(target)
+        if target and target:FindFirstChild("Head") and target.Head:FindFirstChild("SkillTag") then
+            target.Head.SkillTag:Destroy()
+            self.Billboards[target] = nil
+        end
+    end
+    
+    function DeathCounterESP:Start()
+        if self.Enabled then return end
+        
+        self.Enabled = true
+        
+        local heartbeatConn = RunService.Heartbeat:Connect(function()
+            if not self.Enabled then return end
+            
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer then
+                    local char = plr.Character
+                    local backpack = plr:FindFirstChildOfClass("Backpack")
+                    
+                    if char and backpack then
+                        local skillType = self:GetSkillType(backpack)
+                        local lastState = self.State[plr]
+
+                        if not lastState then
+                            self.State[plr] = skillType
+                            if skillType == "strong" then
+                                self:CreateBillboard(char, "💢") -- Ultimate indicator
+                            else
+                                self:RemoveBillboard(char)
+                            end
+                        else
+                            if skillType == "strong" then
+                                if lastState ~= "strong" then
+                                    self:CreateBillboard(char, "💢")
+                                end
+                                self.State[plr] = "strong"
+                            elseif skillType == "weak" and lastState == "strong" then
+                                self:CreateBillboard(char, "⚠️") -- Death Counter indicator
+                                self.State[plr] = "weak"
+                                task.delay(math.random(8, 9), function()
+                                    if self.State[plr] == "weak" then
+                                        self:RemoveBillboard(char)
+                                    end
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+        
+        table.insert(self.Connections, heartbeatConn)
+    end
+    
+    function DeathCounterESP:Stop()
+        if not self.Enabled then return end
+        
+        self.Enabled = false
+        
+        -- Remove all billboards
+        for target, _ in pairs(self.Billboards) do
+            self:RemoveBillboard(target)
+        end
+        
+        -- Disconnect all connections
+        for _, conn in ipairs(self.Connections) do
+            conn:Disconnect()
+        end
+        self.Connections = {}
+        self.State = {}
+        self.Billboards = {}
+    end
+    
+    local deathCounterESPToggle = ESPTab:Toggle({
+        Title = "Death Counter ESP",
+        Desc = "⚠️ = Death Counter, 💢 = Ultimate\nShows enemy skill indicators above their heads",
+        Value = ConfigManager:Get("DeathCounterESPEnabled"),
+        Callback = function(state)
+            ConfigManager:Set("DeathCounterESPEnabled", state)
+            if state then
+                DeathCounterESP:Start()
+                WindUI:Notify({
+                    Title = "Death Counter ESP",
+                    Content = "Death Counter ESP activated",
+                    Duration = 2,
+                    Icon = "skull"
+                })
+            else
+                DeathCounterESP:Stop()
+                WindUI:Notify({
+                    Title = "Death Counter ESP",
+                    Content = "Death Counter ESP deactivated",
+                    Duration = 2,
+                    Icon = "skull-off"
+                })
+            end
+        end
+    })
+    
     -- Settings Tab Elements
     SettingsTab:Section({
         Title = "Settings Management",
@@ -1189,12 +1384,13 @@ end)
             
             -- Update UI elements
             autoBlockToggle:SetValue(defaultConfig.AutoBlockEnabled)
-            counterNotifierToggle:SetValue(defaultConfig.CounterNotifierEnabled)
             m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled)
             closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange)
             longRangeSlider:SetValue(defaultConfig.AutoBlockLongRange)
             camlockToggle:SetValue(defaultConfig.CamlockEnabled)
             mobileCamlockToggle:SetValue(defaultConfig.MobileCamlockButton)
+            counterESPToggle:SetValue(defaultConfig.CounterESPEnabled)
+            deathCounterESPToggle:SetValue(defaultConfig.DeathCounterESPEnabled)
             keybindButton:SetTitle("Change Keybind (Currently: " .. defaultConfig.CamlockKeybind .. ")")
             
             -- Restart systems with new settings
@@ -1205,6 +1401,14 @@ end)
             
             if Camlock.Enabled then
                 Camlock:Stop()
+            end
+            
+            if CounterESP.Enabled then
+                CounterESP:Stop()
+            end
+            
+            if DeathCounterESP.Enabled then
+                DeathCounterESP:Stop()
             end
             
             if Camlock.MobileButton and not defaultConfig.MobileCamlockButton then
@@ -1261,12 +1465,12 @@ end)
     
     AboutTab:Paragraph({
         Title = "Features",
-        Desc = "• Advanced Auto Block system\n• Camlock with mobile button\n• Counter move detection\n• M1 After Block feature\n• Configurable detection ranges\n• Settings persistence\n• Clean, modern UI"
+        Desc = "• Advanced Auto Block system\n• Camlock with mobile button\n• Counter ESP detection\n• Death Counter ESP\n• M1 After Block feature\n• Configurable detection ranges\n• Settings persistence\n• Clean, modern UI"
     })
     
     AboutTab:Paragraph({
         Title = "Instructions",
-        Desc = "1. Enable Auto Block in Combat tab\n2. Adjust ranges in Combat tab\n3. Configure Camlock in Camlock tab\n4. Save your preferred settings"
+        Desc = "1. Enable Auto Block in Combat tab\n2. Configure ESP in ESP tab\n3. Set up Camlock in Camlock tab\n4. Save your preferred settings"
     })
     
     AboutTab:Button({
@@ -1300,6 +1504,17 @@ end)
     -- Initialize keybind
     Camlock:SetupKeybind()
     
+    -- Escape key handler
+    game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+        if not processed and input.KeyCode == Enum.KeyCode.Escape and Camlock.Enabled then
+            Camlock:Stop()
+            ConfigManager:Set("CamlockEnabled", false)
+            if camlockToggle then
+                camlockToggle:SetValue(false)
+            end
+        end
+    end)
+    
     -- Initialize based on saved state
     task.spawn(function()
         task.wait(1)
@@ -1329,6 +1544,16 @@ end)
         -- Initialize mobile camlock button
         if ConfigManager:Get("MobileCamlockButton") then
             Camlock:CreateMobileButton()
+        end
+        
+        -- Initialize Counter ESP
+        if ConfigManager:Get("CounterESPEnabled") then
+            CounterESP:Start()
+        end
+        
+        -- Initialize Death Counter ESP
+        if ConfigManager:Get("DeathCounterESPEnabled") then
+            DeathCounterESP:Start()
         end
     end)
     
