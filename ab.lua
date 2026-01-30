@@ -1220,7 +1220,176 @@ function Camlock:SetupKeybind()
             end
         end
     })
+    -- Ping Display ESP System
+local PingESP = {
+    Enabled = false,
+    GuiFolder = nil,
+    Connections = {}
+}
+
+function PingESP:CreateBillboard(player)
+    if player == LocalPlayer then return nil end
     
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "PingDisplay_" .. player.Name
+    bb.Size = UDim2.new(0, 100, 0, 40)
+    bb.AlwaysOnTop = true
+    bb.MaxDistance = 300  -- Increased for better visibility
+    bb.StudsOffset = Vector3.new(0, 3, 0)  -- Higher above head
+    
+    local label = Instance.new("TextLabel")
+    label.Name = "PingLabel"
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold  -- Better font
+    label.TextSize = 14
+    label.TextStrokeTransparency = 0.5
+    label.TextStrokeColor3 = Color3.new(0, 0, 0)
+    label.Text = "0ms"
+    label.Parent = bb
+    
+    return bb
+end
+
+function PingESP:UpdatePingColor(label, ping)
+    ping = ping or 0
+    
+    -- Dynamic color based on ping
+    if ping < 50 then
+        -- Green for low ping
+        label.TextColor3 = Color3.fromRGB(50, 255, 50)
+    elseif ping < 150 then
+        -- Yellow for medium ping
+        label.TextColor3 = Color3.fromRGB(255, 255, 50)
+    else
+        -- Red for high ping
+        label.TextColor3 = Color3.fromRGB(255, 50, 50)
+    end
+end
+
+function PingESP:Start()
+    if self.Enabled then return end
+    
+    self.Enabled = true
+    
+    -- Create GUI folder
+    self.GuiFolder = Instance.new("Folder")
+    self.GuiFolder.Name = "PingESP"
+    self.GuiFolder.Parent = game:GetService("CoreGui")
+    
+    -- Track existing players
+    for _, player in ipairs(Players:GetPlayers()) do
+        self:SetupPlayer(player)
+    end
+    
+    -- Track new players
+    local playerAddedConn = Players.PlayerAdded:Connect(function(player)
+        self:SetupPlayer(player)
+    end)
+    
+    table.insert(self.Connections, playerAddedConn)
+    
+    WindUI:Notify({
+        Title = "Ping Display ESP",
+        Content = "Ping Display ESP activated",
+        Duration = 2,
+        Icon = "wifi"
+    })
+end
+
+function PingESP:SetupPlayer(player)
+    if player == LocalPlayer then return end
+    
+    local bb = self:CreateBillboard(player)
+    if not bb then return end
+    
+    bb.Parent = self.GuiFolder
+    
+    -- Update ping continuously
+    local heartbeatConn = RunService.Heartbeat:Connect(function()
+        if not self.Enabled or not bb or not bb.Parent then
+            heartbeatConn:Disconnect()
+            return
+        end
+        
+        local character = player.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            bb.Adornee = character.HumanoidRootPart
+            
+            local ping = player:GetAttribute("Ping") or 0
+            local pingValue = math.floor(ping)
+            
+            if bb:FindFirstChild("PingLabel") then
+                local label = bb.PingLabel
+                label.Text = tostring(pingValue) .. "ms"
+                self:UpdatePingColor(label, pingValue)
+                
+                -- Handle dead players
+                local humanoid = character:FindFirstChild("Humanoid")
+                if humanoid and humanoid.Health <= 0 then
+                    label.TextColor3 = Color3.fromRGB(100, 100, 100)  -- Gray for dead
+                end
+            end
+        else
+            bb.Adornee = nil
+        end
+    end)
+    
+    -- Handle character changes
+    local charAddedConn = player.CharacterAdded:Connect(function(character)
+        task.wait(1) -- Wait for character to load
+        if self.Enabled and bb and bb.Parent then
+            local rootPart = character:WaitForChild("HumanoidRootPart", 3)
+            if rootPart then
+                bb.Adornee = rootPart
+            end
+        end
+    end)
+    
+    -- Store connections for cleanup
+    table.insert(self.Connections, heartbeatConn)
+    table.insert(self.Connections, charAddedConn)
+end
+
+function PingESP:Stop()
+    if not self.Enabled then return end
+    
+    self.Enabled = false
+    
+    -- Remove GUI folder
+    if self.GuiFolder then
+        self.GuiFolder:Destroy()
+        self.GuiFolder = nil
+    end
+    
+    -- Disconnect all connections
+    for _, conn in ipairs(self.Connections) do
+        if conn then
+            pcall(function() conn:Disconnect() end)
+        end
+    end
+    self.Connections = {}
+    
+    WindUI:Notify({
+        Title = "Ping Display ESP",
+        Content = "Ping Display ESP deactivated",
+        Duration = 2,
+        Icon = "wifi-off"
+    })
+end
+
+local pingESPToggle = ESPTab:Toggle({
+    Title = "Ping Display ESP",
+    Desc = "Shows player ping above their heads\nGreen(<50ms) Yellow(<150ms) Red(>150ms)",
+    Value = false,
+    Callback = function(state)
+        if state then
+            PingESP:Start()
+        else
+            PingESP:Stop()
+        end
+    end
+})
     -- Death Counter ESP System
     local DeathCounterESP = {
         Enabled = false,
