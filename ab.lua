@@ -1054,7 +1054,7 @@ function Camlock:SetupKeybind()
     -- ESP Tab Elements (Counter ESP Moved Here)
     ESPTab:Section({
         Title = "ESP Systems",
-        Desc = "Visual indicators for enemy abilities"
+        Desc = "Visual indicators utility"
     })
     
     -- Counter ESP System (FIXED - BLUE HIGHLIGHT, 4 SECONDS)
@@ -1151,7 +1151,7 @@ function Camlock:SetupKeybind()
                             game:GetService("StarterGui"):SetCore("SendNotification", {
                                 Title = "Counter Ended",
                                 Text = player.Name .. "'s counter move cooldown has ended",
-                                Duration = 2,
+                                Duration = 1.2,
                             })
                         end)
                     end
@@ -1206,7 +1206,7 @@ function Camlock:SetupKeybind()
     
     local counterESPToggle = ESPTab:Toggle({
         Title = "Counter ESP",
-        Desc = "Highlights enemies when they use counter moves (4 seconds, Blue)",
+        Desc = "Highlights enemies when they use counter moves.",
         Value = ConfigManager:Get("CounterESPEnabled"),
         Callback = function(state)
             ConfigManager:Set("CounterESPEnabled", state)
@@ -1310,7 +1310,7 @@ function Camlock:SetupKeybind()
                         if not lastState then
                             self.State[plr] = skillType
                             if skillType == "strong" then
-                                self:CreateBillboard(char, "💢") -- Ultimate indicator
+                                self:CreateBillboard(char, "💥") -- Ultimate indicator
                             else
                                 self:RemoveBillboard(char)
                             end
@@ -1359,7 +1359,7 @@ function Camlock:SetupKeybind()
     
     local deathCounterESPToggle = ESPTab:Toggle({
         Title = "Death Counter ESP",
-        Desc = "⚠️ = Death Counter, 💢 = Ultimate\nShows enemy skill indicators above their heads",
+        Desc = "⚠️ = Death Counter, 💥 = Ultimate\nShows enemy skill indicators above their heads",
         Value = ConfigManager:Get("DeathCounterESPEnabled"),
         Callback = function(state)
             ConfigManager:Set("DeathCounterESPEnabled", state)
