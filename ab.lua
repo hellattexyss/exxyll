@@ -105,7 +105,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     -- Initialize config
     ConfigManager:Load()
     
-    -- Create WindUI Window with Custom Title
+    -- Create WindUI Window with Custom Title and Crimson border
     local Window = WindUI:CreateWindow({
         Title = "Combat UI - Waspire",
         Icon = "shield",
@@ -114,6 +114,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         Size = UDim2.fromOffset(620, 140), -- Increased size
         Transparent = false,
         Theme = "Crimson",
+        BorderColor = Color3.fromHex("#DC143C"), -- Crimson border color
         Resizable = true,
         SideBarWidth = 135,
         HideSearchBar = true,
@@ -121,13 +122,15 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         MinimizeEnabled = true,
         CloseEnabled = true,
     })
-    -- Add Version Tag (ADD THIS RIGHT HERE)
+    
+    -- Add Version Tag
     Window:Tag({
         Title = "v1.0",
         Color = Color3.fromHex("#DC143C"),  -- Crimson red color
         Radius = 13
     })
-    -- Add Premium Tag with Star Icon (ADD THIS)
+    
+    -- Add Premium Tag with Star Icon
     Window:Tag({
         Title = "Premium",
         Icon = "star",
@@ -135,8 +138,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         BorderColor = Color3.fromHex("#DC143C"),  -- Crimson border
         Radius = 10
      })
-    
--- Snippet 2/4: AutoBlock Core Functions
+-- Snippet 2/4: AutoBlock Core Functions (UNTOUCHED)
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -416,7 +418,7 @@ function AutoBlock:Toggle()
     end
     return self.Enabled
     end
--- Snippet 3/4: Camlock System with Fixes
+-- Snippet 3/4: Camlock System with ALL FIXES
 -- Camlock System
 local Camlock = {
     Enabled = false,
@@ -430,7 +432,8 @@ local Camlock = {
     LastToggleTime = 0,
     Cooldown = 0.5,  -- Cooldown between toggles
     InputConnections = {},  -- Separate storage for input connections
-    IsDead = false  -- Track if local player is dead
+    IsDead = false,  -- Track if local player is dead
+    IsDragging = false  -- Track if button is being dragged
 }
 
 -- Camlock Functions
@@ -737,7 +740,6 @@ function Camlock:Toggle()
         -- Turn OFF
         self:Stop()
         self.ButtonState = "OFF"
-        ConfigManager:Set("CamlockEnabled", false)
         return false
     else
         -- Turn ON
@@ -745,15 +747,8 @@ function Camlock:Toggle()
         if target then
             self:Start(target)
             self.ButtonState = "ON"
-            ConfigManager:Set("CamlockEnabled", true)
             return true
         else
-            WindUI:Notify({
-                Title = "Camlock",
-                Content = "No target found in camera FOV",
-                Duration = 2,
-                Icon = "alert-triangle"
-            })
             return false
         end
     end
@@ -768,8 +763,7 @@ end
 
 function Camlock:CreateMobileButton()
     if self.MobileButton then
-        self.MobileButton:Destroy()
-        self.MobileButton = nil
+        self:RemoveMobileButton()
     end
     
     -- Clear any previous input connections
@@ -806,47 +800,52 @@ function Camlock:CreateMobileButton()
     button.Position = UDim2.new(1, -130, 0.5, -20)
     button.Parent = screenGui
     
-    -- Make draggable with improved handling
+    -- Make draggable with proper dragging logic
     local dragging = false
     local dragStart, startPos
     
-    -- Mouse drag functionality
+    -- Handle drag start for mouse
     button.MouseButton1Down:Connect(function()
         dragging = true
-        dragStart = game:GetService("UserInputService"):GetMouseLocation()
+        self.IsDragging = true
+        dragStart = Vector2.new(game:GetService("UserInputService"):GetMouseLocation().X, game:GetService("UserInputService"):GetMouseLocation().Y)
         startPos = button.Position
     end)
     
-    -- Touch drag functionality
+    -- Handle drag start for touch
     button.TouchLongPress:Connect(function(touchPos)
         dragging = true
+        self.IsDragging = true
         dragStart = touchPos
         startPos = button.Position
     end)
     
-    -- Mouse up/touch ended
+    -- Function to end drag
     local function endDrag()
         dragging = false
+        self.IsDragging = false
     end
     
-    button.MouseButton1Up:Connect(endDrag)
-    button.MouseLeave:Connect(endDrag)
-    
-    -- Touch ended
-    local touchEndedConn = game:GetService("UserInputService").TouchEnded:Connect(function()
-        dragging = false
+    -- Handle drag end for mouse
+    local mouseUpConnection = game:GetService("UserInputService").InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            endDrag()
+        end
     end)
-    table.insert(self.InputConnections, touchEndedConn)
+    table.insert(self.InputConnections, mouseUpConnection)
+    
+    -- Handle drag end for touch
+    local touchEndConnection = game:GetService("UserInputService").TouchEnded:Connect(endDrag)
+    table.insert(self.InputConnections, touchEndConnection)
     
     -- Update position while dragging
-    local dragConnection
-    dragConnection = game:GetService("RunService").Heartbeat:Connect(function()
+    local dragConnection = RunService.Heartbeat:Connect(function()
         if dragging then
             local inputService = game:GetService("UserInputService")
             local currentPos
             
             if inputService.MouseEnabled and inputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-                currentPos = inputService:GetMouseLocation()
+                currentPos = Vector2.new(inputService:GetMouseLocation().X, inputService:GetMouseLocation().Y)
             elseif inputService.TouchEnabled then
                 local touch = inputService:GetTouchInputs()[1]
                 if touch then
@@ -868,11 +867,16 @@ function Camlock:CreateMobileButton()
     
     table.insert(self.InputConnections, dragConnection)
     
-    -- Button functionality with debounce and proper filtering
+    -- Button functionality with debounce
     local lastClickTime = 0
     local clickCooldown = 0.5
     
     local function handleCamlockToggle()
+        -- Check if we're dragging
+        if self.IsDragging then
+            return
+        end
+        
         local currentTime = tick()
         if currentTime - lastClickTime > clickCooldown then
             lastClickTime = currentTime
@@ -890,6 +894,9 @@ function Camlock:CreateMobileButton()
                     camlockToggle:SetValue(newState)
                 end
                 
+                -- Update config
+                ConfigManager:Set("CamlockEnabled", newState)
+                
                 WindUI:Notify({
                     Title = "Camlock",
                     Content = newState and "Camlock activated" or "Camlock deactivated",
@@ -902,13 +909,13 @@ function Camlock:CreateMobileButton()
     
     -- Connect click events directly to button only
     button.MouseButton1Click:Connect(function()
-        if not dragging then
+        if not self.IsDragging then
             handleCamlockToggle()
         end
     end)
     
     button.TouchTap:Connect(function()
-        if not dragging then
+        if not self.IsDragging then
             handleCamlockToggle()
         end
     end)
@@ -917,7 +924,26 @@ function Camlock:CreateMobileButton()
     self.MobileButton = screenGui
     self:UpdateMobileButtonText()
 end
--- Snippet 4/4: UI Setup and Final Initialization
+
+function Camlock:RemoveMobileButton()
+    -- Disconnect input connections first
+    for _, conn in ipairs(self.InputConnections) do
+        if conn then
+            pcall(function() conn:Disconnect() end)
+        end
+    end
+    self.InputConnections = {}
+    
+    -- Remove the button
+    if self.MobileButton then
+        self.MobileButton:Destroy()
+        self.MobileButton = nil
+    end
+    
+    -- Reset dragging state
+    self.IsDragging = false
+    end
+-- Snippet 4/4: UI Setup and Final Initialization with FIXES
     -- Create Tabs with better styling
     local CombatTab = Window:Tab({
         Title = "Combat",
@@ -1033,6 +1059,11 @@ end
         Desc = "Configure auto block detection distances"
     })
     
+    -- Store slider values locally to avoid notification spam
+    local lastCloseRangeNotification = 0
+    local lastLongRangeNotification = 0
+    local notificationCooldown = 1
+    
     local closeRangeSlider = CombatTab:Slider({
         Title = "Close Range Distance",
         Desc = "Distance for close range moves (studs)",
@@ -1043,12 +1074,17 @@ end
         },
         Callback = function(value)
             ConfigManager:Set("AutoBlockCloseRange", tonumber(value))
-            WindUI:Notify({
-                Title = "Settings Updated",
-                Content = "Close range set to " .. value .. " studs",
-                Duration = 2,
-                Icon = "settings"
-            })
+            -- Only show notification on final value (not during dragging)
+            local currentTime = tick()
+            if currentTime - lastCloseRangeNotification > notificationCooldown then
+                lastCloseRangeNotification = currentTime
+                WindUI:Notify({
+                    Title = "Settings Updated",
+                    Content = "Close range set to " .. value .. " studs",
+                    Duration = 2,
+                    Icon = "settings"
+                })
+            end
         end
     })
     
@@ -1062,12 +1098,17 @@ end
         },
         Callback = function(value)
             ConfigManager:Set("AutoBlockLongRange", tonumber(value))
-            WindUI:Notify({
-                Title = "Settings Updated",
-                Content = "Long range set to " .. value .. " studs",
-                Duration = 2,
-                Icon = "settings"
-            })
+            -- Only show notification on final value (not during dragging)
+            local currentTime = tick()
+            if currentTime - lastLongRangeNotification > notificationCooldown then
+                lastLongRangeNotification = currentTime
+                WindUI:Notify({
+                    Title = "Settings Updated",
+                    Content = "Long range set to " .. value .. " studs",
+                    Duration = 2,
+                    Icon = "settings"
+                })
+            end
         end
     })
     
@@ -1078,49 +1119,49 @@ end
     })
     
     local camlockToggle = CamlockTab:Toggle({
-    Title = "Camlock (PC)",
-    Desc = "Enable camera lock to nearest enemy for PC users",
-    Value = ConfigManager:Get("CamlockEnabled"),
-    Callback = function(state)
-        ConfigManager:Set("CamlockEnabled", state)
-        
-        if state then
-            -- Only start if toggle is ON
-            local target = Camlock:FindClosestTarget()
-            if target then
-                Camlock.ButtonState = "ON"
-                Camlock:Start(target)
+        Title = "Camlock (PC)",
+        Desc = "Enable camera lock to nearest enemy for PC users",
+        Value = ConfigManager:Get("CamlockEnabled"),
+        Callback = function(state)
+            ConfigManager:Set("CamlockEnabled", state)
+            
+            if state then
+                -- Only start if toggle is ON
+                local target = Camlock:FindClosestTarget()
+                if target then
+                    Camlock.ButtonState = "ON"
+                    Camlock:Start(target)
+                    Camlock:UpdateMobileButtonText()
+                    WindUI:Notify({
+                        Title = "Camlock",
+                        Content = "Camlock activated on " .. target.Name,
+                        Duration = 2,
+                        Icon = "crosshair"
+                    })
+                else
+                    -- No target found, revert toggle
+                    ConfigManager:Set("CamlockEnabled", false)
+                    camlockToggle:SetValue(false)
+                    WindUI:Notify({
+                        Title = "Camlock",
+                        Content = "No target found in camera FOV",
+                        Duration = 2,
+                        Icon = "alert-triangle"
+                    })
+                end
+            else
+                -- Turn OFF
+                Camlock:Stop()
+                Camlock.ButtonState = "OFF"
                 Camlock:UpdateMobileButtonText()
                 WindUI:Notify({
                     Title = "Camlock",
-                    Content = "Camlock activated on " .. target.Name,
+                    Content = "Camlock deactivated",
                     Duration = 2,
                     Icon = "crosshair"
                 })
-            else
-                -- No target found, revert toggle
-                ConfigManager:Set("CamlockEnabled", false)
-                camlockToggle:SetValue(false)
-                WindUI:Notify({
-                    Title = "Camlock",
-                    Content = "No target found in camera FOV",
-                    Duration = 2,
-                    Icon = "alert-triangle"
-                })
             end
-        else
-            -- Turn OFF
-            Camlock:Stop()
-            Camlock.ButtonState = "OFF"
-            Camlock:UpdateMobileButtonText()
-            WindUI:Notify({
-                Title = "Camlock",
-                Content = "Camlock deactivated",
-                Duration = 2,
-                Icon = "crosshair"
-            })
         end
-    end
     })
     
     local keybindButton = CamlockTab:Button({
@@ -1146,33 +1187,36 @@ end
                 Duration = 3,
                 Icon = "check"
             })
+            
+            -- Re-setup keybind
+            setupKeybind()
         end
     })
     
     local mobileCamlockToggle = CamlockTab:Toggle({
-    Title = "Mobile Camlock Button",
-    Desc = "Show mobile button for camlock control (Mobile users)",
-    Value = ConfigManager:Get("MobileCamlockButton"),
-    Callback = function(state)
-        ConfigManager:Set("MobileCamlockButton", state)
-        if state then
-            Camlock:CreateMobileButton()
-            WindUI:Notify({
-                Title = "Mobile Button",
-                Content = "Mobile camlock button added to screen",
-                Duration = 2,
-                Icon = "smartphone"
-            })
-        else
-            Camlock:RemoveMobileButton()
-            WindUI:Notify({
-                Title = "Mobile Button",
-                Content = "Mobile camlock button removed",
-                Duration = 2,
-                Icon = "smartphone-off"
-            })
+        Title = "Mobile Camlock Button",
+        Desc = "Show mobile button for camlock control (Mobile users)",
+        Value = ConfigManager:Get("MobileCamlockButton"),
+        Callback = function(state)
+            ConfigManager:Set("MobileCamlockButton", state)
+            if state then
+                Camlock:CreateMobileButton()
+                WindUI:Notify({
+                    Title = "Mobile Button",
+                    Content = "Mobile camlock button added to screen",
+                    Duration = 2,
+                    Icon = "smartphone"
+                })
+            else
+                Camlock:RemoveMobileButton()
+                WindUI:Notify({
+                    Title = "Mobile Button",
+                    Content = "Mobile camlock button removed",
+                    Duration = 2,
+                    Icon = "smartphone-off"
+                })
+            end
         end
-    end
     })
     
     -- Settings Tab Elements (without emojis)
@@ -1317,70 +1361,79 @@ end
         end
     })
     
--- Fixed keybind handler for camlock with better control
-local keybindConnection
-local lastKeybindTime = 0
-local keybindCooldown = 0.5
-
--- Function to setup keybind
-local function setupKeybind()
-    -- Disconnect previous connection if exists
-    if keybindConnection then
-        keybindConnection:Disconnect()
-        keybindConnection = nil
+    -- Fixed keybind handler for camlock with better control
+    local keybindConnection
+    local lastKeybindTime = 0
+    local keybindCooldown = 0.5
+    
+    -- Function to setup keybind
+    local function setupKeybind()
+        -- Disconnect previous connection if exists
+        if keybindConnection then
+            keybindConnection:Disconnect()
+            keybindConnection = nil
+        end
+        
+        -- Create new connection
+        keybindConnection = game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+            -- Only process if not processed by GUI and key matches
+            if not processed and input.KeyCode.Name == ConfigManager:Get("CamlockKeybind") then
+                local currentTime = tick()
+                if currentTime - lastKeybindTime > keybindCooldown then
+                    lastKeybindTime = currentTime
+                    
+                    -- Toggle camlock
+                    local wasEnabled = Camlock.Enabled
+                    local newState = Camlock:Toggle()
+                    
+                    if newState ~= wasEnabled then
+                        -- Update mobile button text
+                        Camlock:UpdateMobileButtonText()
+                        
+                        -- Update UI toggle
+                        if camlockToggle then
+                            camlockToggle:SetValue(newState)
+                        end
+                        
+                        -- Update config
+                        ConfigManager:Set("CamlockEnabled", newState)
+                        
+                        WindUI:Notify({
+                            Title = "Camlock",
+                            Content = newState and "Camlock activated" or "Camlock deactivated",
+                            Duration = 1.5,
+                            Icon = "crosshair"
+                        })
+                    end
+                end
+            end
+        end)
     end
     
-    -- Create new connection
-    keybindConnection = game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
-        -- Only process if not processed by GUI and key matches
-        if not processed and input.KeyCode.Name == ConfigManager:Get("CamlockKeybind") then
-            local currentTime = tick()
-            if currentTime - lastKeybindTime > keybindCooldown then
-                lastKeybindTime = currentTime
-                
-                -- Toggle camlock
-                local wasEnabled = Camlock.Enabled
-                local newState = Camlock:Toggle()
-                
-                if newState ~= wasEnabled then
-                    -- Update mobile button text
-                    Camlock:UpdateMobileButtonText()
-                    
-                    -- Update UI toggle
-                    if camlockToggle then
-                        camlockToggle:SetValue(newState)
-                    end
-                    
-                    WindUI:Notify({
-                        Title = "Camlock",
-                        Content = newState and "Camlock activated" or "Camlock deactivated",
-                        Duration = 1.5,
-                        Icon = "crosshair"
-                    })
+    -- Initialize keybind
+    setupKeybind()
+    
+    -- Escape key handler
+    game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+        if not processed and input.KeyCode == Enum.KeyCode.Escape then
+            -- Escape key can be used to force stop camlock if needed
+            if Camlock.Enabled then
+                Camlock:Stop()
+                Camlock.ButtonState = "OFF"
+                Camlock:UpdateMobileButtonText()
+                ConfigManager:Set("CamlockEnabled", false)
+                if camlockToggle then
+                    camlockToggle:SetValue(false)
                 end
+                WindUI:Notify({
+                    Title = "Camlock",
+                    Content = "Camlock force stopped",
+                    Duration = 2,
+                    Icon = "alert-triangle"
+                })
             end
         end
     end)
-end
-
--- Initialize keybind
-setupKeybind()
-
--- Re-setup keybind when it's changed
-game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == Enum.KeyCode.Escape then
-        -- Escape key can be used to force stop camlock if needed
-        if Camlock.Enabled then
-            Camlock:Stop()
-            Camlock.ButtonState = "OFF"
-            Camlock:UpdateMobileButtonText()
-            ConfigManager:Set("CamlockEnabled", false)
-            if camlockToggle then
-                camlockToggle:SetValue(false)
-            end
-        end
-    end
-end)
     
     -- Initialize based on saved state
     task.spawn(function()
@@ -1407,6 +1460,9 @@ end)
                 Camlock:UpdateMobileButtonText()
             else
                 ConfigManager:Set("CamlockEnabled", false)
+                if camlockToggle then
+                    camlockToggle:SetValue(false)
+                end
             end
         end
         
