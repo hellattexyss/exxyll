@@ -121,6 +121,14 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         MinimizeEnabled = true,
         CloseEnabled = true,
     })
+    -- Add Version Tag (ADD THIS RIGHT HERE)
+    Window:Tag({
+        Title = "v1.0",
+        Color = Color3.fromHex("#DC143C"),  -- Crimson red color
+        Radius = 13
+    })
+    
+    
 -- Snippet 2/4: AutoBlock Core Functions
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
