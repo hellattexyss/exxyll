@@ -882,14 +882,21 @@ local AutoToxic = {
     Connection = nil
 }
 
--- TextBox for custom message
-local toxicMessageBox = UtilityTab:Input({
+-- Auto Toxic Message Configuration - SIMPLE FIX
+local toxicMessageLabel = UtilityTab:Paragraph({
     Title = "Toxic Message",
-    Desc = "Message to send on kill",
-    Value = AutoToxic.Message,
-    Callback = function(value)
-        if value and value ~= "" then
-            AutoToxic.Message = value
+    Desc = "Current: " .. AutoToxic.Message
+})
+
+local changeMessageButton = UtilityTab:Button({
+    Title = "Change Message",
+    Desc = "Click to edit toxic message",
+    Callback = function()
+        -- Use a simple text input dialog
+        local input = game:GetService("TextService"):GetStringAsync("Enter toxic message:", AutoToxic.Message)
+        if input and input ~= "" then
+            AutoToxic.Message = input
+            toxicMessageLabel:SetDescription("Current: " .. input)
             WindUI:Notify({
                 Title = "Auto Toxic",
                 Content = "Message updated",
