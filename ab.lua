@@ -142,12 +142,12 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     -- Edit Open Button
     Window:EditOpenButton({
         Title = "Open Combat UI - v1.0",
-        Icon = "skull",
+        Icon = "sword",
         CornerRadius = UDim.new(0,16),
         StrokeThickness = 2,
         Color = ColorSequence.new( -- gradient
             Color3.fromHex("DC143C"),  -- Crimson
-            Color3.fromHex("8B0000")   -- Dark Red
+            Color3.fromHex("FFFFFF")   -- Dark Red
         ),
         OnlyMobile = false,
         Enabled = true,
