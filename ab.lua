@@ -109,7 +109,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     -- Create WindUI Window with Custom Title and Crimson border
     local Window = WindUI:CreateWindow({
         Title = "Combat UI - Waspire",
-        Icon = "rbxassetid://118575902529192",
+        Icon = "rbxassetid://125242807265435",
         Author = "The Strongest Battlegrounds",
         Folder = "CombatGUI",
         Size = UDim2.fromOffset(620, 140), -- Increased size
