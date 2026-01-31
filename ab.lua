@@ -139,6 +139,20 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         BorderColor = Color3.fromHex("#DC143C"),  -- Crimson border
         Radius = 10
     })
+    -- Edit Open Button
+    Window:EditOpenButton({
+        Title = "Open Combat UI - v1.0",
+        Icon = "skull",
+        CornerRadius = UDim.new(0,16),
+        StrokeThickness = 2,
+        Color = ColorSequence.new( -- gradient
+            Color3.fromHex("DC143C"),  -- Crimson
+            Color3.fromHex("8B0000")   -- Dark Red
+        ),
+        OnlyMobile = false,
+        Enabled = true,
+        Draggable = true,
+    })
 -- Snippet 2/4: AutoBlock Core Functions (Counter ESP Removed)
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -700,22 +714,22 @@ function Camlock:CreateMobileButton()
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = button
     
-    -- FIXED: Simple and reliable dragging system
+    -- FIXED: SIMPLE DRAGGING - NO CONFLICTS
     local dragging = false
     local dragStart = Vector2.new(0, 0)
     local startPos = UDim2.new(0, 0, 0, 0)
     
     button.MouseButton1Down:Connect(function()
         dragging = true
-        self.IsDragging = true
-        dragStart = Vector2.new(self.InputService:GetMouseLocation().X, self.InputService:GetMouseLocation().Y)
+        dragStart = self.InputService:GetMouseLocation()
         startPos = container.Position
     end)
     
-    -- Mouse movement for dragging
-    self.InputService.InputChanged:Connect(function(input)
+    -- SIMPLE INPUT HANDLER - NO MULTIPLE CONNECTIONS
+    local dragConnection
+    dragConnection = self.InputService.InputChanged:Connect(function(input)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local currentPos = Vector2.new(self.InputService:GetMouseLocation().X, self.InputService:GetMouseLocation().Y)
+            local currentPos = self.InputService:GetMouseLocation()
             local delta = currentPos - dragStart
             container.Position = UDim2.new(
                 startPos.X.Scale, 
@@ -726,23 +740,22 @@ function Camlock:CreateMobileButton()
         end
     end)
     
-    -- Mouse up to stop dragging
-    self.InputService.InputEnded:Connect(function(input)
+    local upConnection
+    upConnection = self.InputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
-            self.IsDragging = false
         end
     end)
     
-    -- FIXED: Proper click handler with delay to prevent click after drag
+    -- Store connections for cleanup
+    table.insert(self.Connections, dragConnection)
+    table.insert(self.Connections, upConnection)
+    
+    -- FIXED: SIMPLE CLICK HANDLER
     button.MouseButton1Click:Connect(function()
-        -- Small delay to ensure dragging is finished
-        task.wait(0.05)
-        
-        if self.IsDragging then
-            self.IsDragging = false
-            return
-        end
+        -- Check if we were dragging
+        task.wait(0.1)
+        if dragging then return end
         
         local currentTime = tick()
         if currentTime - self.LastClickTime < self.ClickCooldown then
@@ -768,7 +781,8 @@ function Camlock:CreateMobileButton()
     self.MobileButtonFrame = container
     
     screenGui.Parent = game:GetService("CoreGui")
-end           
+end
+
 -- Update mobile button text
 function Camlock:UpdateMobileButtonText()
     if self.MobileButtonFrame and self.MobileButtonFrame:FindFirstChild("CamlockButton") then
@@ -825,7 +839,7 @@ function Camlock:SetupKeybind()
             end
         end
     end)
-    end
+end
 -- Snippet 4/4: UI Setup and Final Initialization with ESP Tab
     -- Create Tabs with better styling
     local CombatTab = Window:Tab({
@@ -1391,86 +1405,266 @@ local pingESPToggle = ESPTab:Toggle({
         end
     end
 })
--- Opponent Block ESP System
+-- High Ping Warning System
+local HighPingWarning = {
+    Enabled = true,
+    Threshold = 150, -- ms
+    WarningFrame = nil,
+    Blinking = false
+}
+
+function HighPingWarning:CreateWarningFrame()
+    if self.WarningFrame then return end
+    
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "HighPingWarning"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    local frame = Instance.new("Frame")
+    frame.Name = "WarningFrame"
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BackgroundTransparency = 0.6
+    frame.Size = UDim2.new(0, 300, 0, 80)
+    frame.Position = UDim2.new(0.5, -150, 0.8, 0)  -- Middle bottom
+    frame.BorderSizePixel = 0
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+    
+    -- Warning icon
+    local warningIcon = Instance.new("TextLabel")
+    warningIcon.Name = "WarningIcon"
+    warningIcon.Text = "⚠️"
+    warningIcon.TextSize = 24
+    warningIcon.TextColor3 = Color3.fromRGB(255, 50, 50)
+    warningIcon.BackgroundTransparency = 1
+    warningIcon.Size = UDim2.new(0, 40, 0, 40)
+    warningIcon.Position = UDim2.new(0, 10, 0.5, -20)
+    warningIcon.Font = Enum.Font.GothamBold
+    warningIcon.Parent = frame
+    
+    -- Main warning text
+    local warningText = Instance.new("TextLabel")
+    warningText.Name = "WarningText"
+    warningText.Text = "PING TOO HIGH"
+    warningText.TextSize = 18
+    warningText.TextColor3 = Color3.fromRGB(255, 50, 50)
+    warningText.BackgroundTransparency = 1
+    warningText.Size = UDim2.new(1, -60, 0.5, 0)
+    warningText.Position = UDim2.new(0, 50, 0, 10)
+    warningText.Font = Enum.Font.GothamBold
+    warningText.TextXAlignment = Enum.TextXAlignment.Left
+    warningText.Parent = frame
+    
+    -- Subtext
+    local subText = Instance.new("TextLabel")
+    subText.Name = "SubText"
+    subText.Text = "Autoblock may not work properly."
+    subText.TextSize = 14
+    subText.TextColor3 = Color3.fromRGB(180, 180, 180)
+    subText.BackgroundTransparency = 1
+    subText.Size = UDim2.new(1, -60, 0.5, 0)
+    subText.Position = UDim2.new(0, 50, 0.5, 0)
+    subText.Font = Enum.Font.Gotham
+    subText.TextXAlignment = Enum.TextXAlignment.Left
+    subText.Parent = frame
+    
+    screenGui.Parent = game:GetService("CoreGui")
+    self.WarningFrame = screenGui
+    
+    -- Start hidden
+    self.WarningFrame.Enabled = false
+end
+
+function HighPingWarning:StartBlinking()
+    if self.Blinking then return end
+    self.Blinking = true
+    
+    self.WarningFrame.Enabled = true
+    
+    task.spawn(function()
+        while self.Blinking and self.WarningFrame and self.WarningFrame.Parent do
+            -- Blink effect
+            self.WarningFrame.WarningFrame.BackgroundTransparency = 0.3
+            self.WarningFrame.WarningFrame.WarningText.TextColor3 = Color3.fromRGB(255, 100, 100)
+            task.wait(0.5)
+            
+            if not self.Blinking then break end
+            
+            self.WarningFrame.WarningFrame.BackgroundTransparency = 0.6
+            self.WarningFrame.WarningFrame.WarningText.TextColor3 = Color3.fromRGB(255, 50, 50)
+            task.wait(0.5)
+        end
+    end)
+end
+
+function HighPingWarning:StopBlinking()
+    self.Blinking = false
+    if self.WarningFrame then
+        self.WarningFrame.Enabled = false
+    end
+end
+
+function HighPingWarning:CheckPing()
+    if not self.Enabled then return end
+    
+    local ping = LocalPlayer:GetAttribute("Ping") or 0
+    local pingValue = math.floor(ping)
+    
+    if pingValue >= self.Threshold then
+        if not self.WarningFrame then
+            self:CreateWarningFrame()
+        end
+        self:StartBlinking()
+        
+        -- Update ping value in warning
+        if self.WarningFrame and self.WarningFrame.WarningFrame then
+            self.WarningFrame.WarningFrame.WarningText.Text = "PING TOO HIGH (" .. pingValue .. "ms)"
+        end
+    else
+        self:StopBlinking()
+    end
+end
+
+function HighPingWarning:Start()
+    self:CreateWarningFrame()
+    
+    -- Check ping every second
+    task.spawn(function()
+        while task.wait(1) do
+            if self.Enabled then
+                self:CheckPing()
+            end
+        end
+    end)
+end
+
+function HighPingWarning:Stop()
+    self:StopBlinking()
+    if self.WarningFrame then
+        self.WarningFrame:Destroy()
+        self.WarningFrame = nil
+    end
+end
+
+-- Add toggle to ESPTab (add this in ESPTab section)
+local highPingToggle = ESPTab:Toggle({
+    Title = "High Ping Warning",
+    Desc = "Shows warning when ping is too high (150+ ms)",
+    Value = false,
+    Callback = function(state)
+        if state then
+            HighPingWarning:Start()
+            WindUI:Notify({
+                Title = "High Ping Warning",
+                Content = "High ping warning enabled",
+                Duration = 2,
+                Icon = "alert-triangle"
+            })
+        else
+            HighPingWarning:Stop()
+            WindUI:Notify({
+                Title = "High Ping Warning",
+                Content = "High ping warning disabled",
+                Duration = 2,
+                Icon = "alert-triangle-off"
+            })
+        end
+    end
+})
+-- Opponent Block ESP System - FIXED
 local BlockESP = {
     Enabled = false,
     BlockAnimationId = "rbxassetid://10470389827",
-    BlockImageId = "rbxassetid://13180179085",  -- Your custom image
+    BlockImageId = "rbxassetid://13180179085",
+    Indicators = {},
     Connections = {}
 }
 
 function BlockESP:CreateBlockIndicator(character)
+    if self.Indicators[character] then return self.Indicators[character] end
+    
     local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
     if not torso then return nil end
     
+    -- Create billboard
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "BlockIndicator"
     billboard.Adornee = torso
-    billboard.Size = UDim2.new(2, 0, 2, 0)
-    billboard.StudsOffset = Vector3.new(0, 1.5, 0)  -- Slightly higher
+    billboard.Size = UDim2.new(4, 0, 4, 0)  -- Larger size for visibility
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)  -- Higher above character
     billboard.AlwaysOnTop = true
-    billboard.MaxDistance = 100
-    billboard.Parent = torso
+    billboard.MaxDistance = 200
+    billboard.Parent = character
     
+    -- Image label
     local imageLabel = Instance.new("ImageLabel")
+    imageLabel.Name = "BlockIcon"
     imageLabel.Size = UDim2.new(1, 0, 1, 0)
     imageLabel.BackgroundTransparency = 1
     imageLabel.Image = self.BlockImageId
-    imageLabel.ImageTransparency = 0.3
+    imageLabel.ImageTransparency = 0.4
     imageLabel.Parent = billboard
     
     -- Pulsing effect
     task.spawn(function()
-        while billboard and billboard.Parent do
-            for i = 0, 1, 0.05 do
-                if not billboard or not billboard.Parent then break end
-                local pulse = 0.3 + (math.sin(i * math.pi) * 0.4)
+        while billboard and billboard.Parent and self.Enabled do
+            for i = 0, 1, 0.1 do
+                if not billboard or not billboard.Parent or not self.Enabled then break end
+                local pulse = 0.4 + (math.sin(i * math.pi) * 0.3)
                 imageLabel.ImageTransparency = pulse
                 task.wait(0.05)
             end
         end
     end)
     
+    self.Indicators[character] = billboard
     return billboard
+end
+
+function BlockESP:RemoveBlockIndicator(character)
+    if self.Indicators[character] then
+        self.Indicators[character]:Destroy()
+        self.Indicators[character] = nil
+    end
 end
 
 function BlockESP:SetupPlayer(player)
     if player == LocalPlayer then return end
     
     local charAddedConn = player.CharacterAdded:Connect(function(character)
-        task.wait(1) -- Wait for character to load
+        task.wait(1)
         
-        local humanoid = character:FindFirstChild("Humanoid")
+        local humanoid = character:WaitForChild("Humanoid", 3)
         if not humanoid then return end
         
+        -- Track animation playback
         local animationConn = humanoid.AnimationPlayed:Connect(function(track)
             if not self.Enabled then return end
             
             if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
-                -- Create block indicator
+                -- Create indicator
                 local billboard = self:CreateBlockIndicator(character)
                 
-                if billboard then
-                    -- Remove indicator when animation stops
-                    track.Stopped:Connect(function()
-                        if billboard and billboard.Parent then
-                            billboard:Destroy()
-                        end
-                    end)
-                    
-                    -- Also remove if player dies
-                    humanoid.Died:Connect(function()
-                        if billboard and billboard.Parent then
-                            billboard:Destroy()
-                        end
-                    end)
-                end
+                -- Remove when animation stops
+                track.Stopped:Connect(function()
+                    if billboard and billboard.Parent then
+                        self:RemoveBlockIndicator(character)
+                    end
+                end)
+                
+                -- Remove if character dies
+                humanoid.Died:Connect(function()
+                    self:RemoveBlockIndicator(character)
+                end)
             end
         end)
         
         table.insert(self.Connections, animationConn)
         
-        -- Handle existing animations
+        -- Check existing animations
         for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
             if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
                 self:CreateBlockIndicator(character)
@@ -1480,7 +1674,7 @@ function BlockESP:SetupPlayer(player)
     
     table.insert(self.Connections, charAddedConn)
     
-    -- Handle existing character
+    -- Setup existing character
     if player.Character then
         local humanoid = player.Character:FindFirstChild("Humanoid")
         if humanoid then
@@ -1492,9 +1686,7 @@ function BlockESP:SetupPlayer(player)
                     
                     if billboard then
                         track.Stopped:Connect(function()
-                            if billboard and billboard.Parent then
-                                billboard:Destroy()
-                            end
+                            self:RemoveBlockIndicator(player.Character)
                         end)
                     end
                 end
@@ -1502,7 +1694,7 @@ function BlockESP:SetupPlayer(player)
             
             table.insert(self.Connections, animationConn)
             
-            -- Check for existing block animation
+            -- Check existing animations
             for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
                 if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
                     self:CreateBlockIndicator(player.Character)
@@ -1542,6 +1734,14 @@ function BlockESP:Stop()
     
     self.Enabled = false
     
+    -- Remove all indicators
+    for character, indicator in pairs(self.Indicators) do
+        if indicator and indicator.Parent then
+            indicator:Destroy()
+        end
+    end
+    self.Indicators = {}
+    
     -- Disconnect all connections
     for _, conn in ipairs(self.Connections) do
         if conn then
@@ -1550,27 +1750,13 @@ function BlockESP:Stop()
     end
     self.Connections = {}
     
-    -- Remove all existing indicators
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character then
-            local torso = player.Character:FindFirstChild("Torso") or player.Character:FindFirstChild("UpperTorso")
-            if torso then
-                local indicator = torso:FindFirstChild("BlockIndicator")
-                if indicator then
-                    indicator:Destroy()
-                end
-            end
-        end
-    end
-    
     WindUI:Notify({
         Title = "Opponent Block ESP",
         Content = "Block indicator ESP deactivated",
         Duration = 2,
         Icon = "shield-off"
     })
-end
-
+  end
 local blockESPToggle = ESPTab:Toggle({
     Title = "Opponent Block ESP",
     Desc = "Shows indicator when enemies use block animation",
