@@ -883,7 +883,7 @@ local AutoToxic = {
 }
 
 -- TextBox for custom message
-local toxicMessageBox = UtilityTab:TextBox({
+local toxicMessageBox = UtilityTab:Input({
     Title = "Toxic Message",
     Desc = "Message to send on kill",
     Value = AutoToxic.Message,
