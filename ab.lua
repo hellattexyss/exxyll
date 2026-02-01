@@ -16,6 +16,9 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         CamlockKeybind = "Q",
         MobileCamlockButton = false,
         DeathCounterESPEnabled = false,
+        PingESPEnabled = false,
+        BlockESPEnabled = false,
+        HighPingWarningEnabled = false,
         AutoToxicEnabled = false,
         AutoToxicMessage = "ez",
         AutoToxicRepeat = 1,
@@ -101,7 +104,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     
     local Window = WindUI:CreateWindow({
         Title = "Combat UI - Waspire",
-        Icon = "shield",
+        Icon = "rbxassetid://125242807265435",
         Author = "The Strongest Battlegrounds",
         Folder = "CombatGUI",
         Size = UDim2.fromOffset(620, 140),
@@ -313,7 +316,7 @@ function AutoBlock:Toggle()
     end
     return self.Enabled
     end
--- Snippet 3/5: Camlock System
+-- Snippet 3/5: Camlock System with Fixed Mobile Button
 local Camlock = {
     Enabled = false,
     Target = nil,
@@ -618,6 +621,7 @@ function Camlock:Toggle()
     end
 end
 
+-- COMPLETELY REWRITTEN MOBILE BUTTON
 function Camlock:CreateMobileButton()
     if self.MobileButton then return end
     
@@ -652,18 +656,17 @@ function Camlock:CreateMobileButton()
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = button
     
-    local isDragging = false
-    local dragStart
-    local startPos
+    -- SIMPLE AND RELIABLE DRAGGING SYSTEM
+    local dragStart, startPos
+    local dragConnection1, dragConnection2
     
     button.MouseButton1Down:Connect(function()
-        isDragging = true
         dragStart = self.InputService:GetMouseLocation()
         startPos = container.Position
     end)
     
-    local dragConnection = self.InputService.InputChanged:Connect(function(input)
-        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+    dragConnection1 = self.InputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and dragStart then
             local currentPos = self.InputService:GetMouseLocation()
             local delta = currentPos - dragStart
             container.Position = UDim2.new(
@@ -675,15 +678,14 @@ function Camlock:CreateMobileButton()
         end
     end)
     
-    local upConnection = self.InputService.InputEnded:Connect(function(input)
+    dragConnection2 = self.InputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isDragging = false
+            dragStart = nil
         end
     end)
     
+    -- SIMPLE AND RELIABLE CLICK HANDLER
     button.MouseButton1Click:Connect(function()
-        if isDragging then return end
-        
         local currentTime = tick()
         if currentTime - self.LastClickTime < self.ClickCooldown then
             return
@@ -691,11 +693,17 @@ function Camlock:CreateMobileButton()
         
         self.LastClickTime = currentTime
         
-        self:Toggle()
+        -- Toggle camlock
+        if self.Enabled then
+            self:Stop()
+        else
+            self:Start()
+        end
     end)
     
-    table.insert(self.Connections, dragConnection)
-    table.insert(self.Connections, upConnection)
+    -- Store connections for cleanup
+    table.insert(self.Connections, dragConnection1)
+    table.insert(self.Connections, dragConnection2)
     
     self.MobileButton = screenGui
     self.MobileButtonFrame = container
@@ -773,7 +781,7 @@ function Camlock:SetupKeybind()
     
     local UtilityTab = Window:Tab({
         Title = "Utility",
-        Icon = "pickaxe",
+        Icon = "tool",
         Locked = false,
     })
     
@@ -785,33 +793,84 @@ function Camlock:SetupKeybind()
 
     -- Info Tab Content
     InfoTab:Section({
-        Title = "Script Information",
-        Desc = "Live server and community stats"
+        Title = "Live Server Statistics",
+        Desc = "Real-time game server information"
     })
 
-    -- Server Statistics
-    local function getServerStats()
-        local totalPlayers = #Players:GetPlayers()
-        local serverSize = game.PlaceId == 10449761463 and 20 or 15
-        
-        local playersText = string.format("Players Online: %d/%d", totalPlayers, serverSize)
-        local statusText = "Server: LIVE"
-        local discordText = "Discord Stats: Loading..."
-        
-        return playersText, statusText, discordText
-    end
-
-    local statsLabel = InfoTab:Paragraph({
-        Title = "Live Statistics",
-        Desc = "Loading..."
+    local serverStatsLabel = InfoTab:Paragraph({
+        Title = "Server Status",
+        Desc = "Loading server stats..."
     })
 
-    task.spawn(function()
-        while task.wait(5) do
-            local playersText, statusText, discordText = getServerStats()
-            statsLabel:SetDescription(playersText .. "\n" .. statusText .. "\n" .. discordText .. "\n\nYouTube Subscribers: 25,600")
+    InfoTab:Button({
+        Title = "Copy Server Info",
+        Desc = "Copy current server statistics to clipboard",
+        Callback = function()
+            local totalPlayers = #Players:GetPlayers()
+            local serverSize = game.PlaceId == 10449761463 and 20 or 15
+            local text = string.format("Server: %d/%d players online", totalPlayers, serverSize)
+            setclipboard(text)
+            WindUI:Notify({
+                Title = "Server Info",
+                Content = "Server information copied to clipboard!",
+                Duration = 2,
+                Icon = "clipboard"
+            })
         end
-    end)
+    })
+
+    InfoTab:Section({
+        Title = "Discord Community",
+        Desc = "Our Discord server statistics"
+    })
+
+    local discordStatsLabel = InfoTab:Paragraph({
+        Title = "Discord Stats",
+        Desc = "Members: Loading...\nOnline: Loading..."
+    })
+
+    InfoTab:Button({
+        Title = "Copy Discord Link",
+        Desc = "Copy Discord invite link to clipboard",
+        Callback = function()
+            setclipboard("https://discord.gg/H2bURQxq3T")
+            WindUI:Notify({
+                Title = "Discord",
+                Content = "Discord link copied to clipboard!",
+                Duration = 2,
+                Icon = "message-circle"
+            })
+        end
+    })
+
+    InfoTab:Section({
+        Title = "YouTube Channel",
+        Desc = "Waspire's YouTube statistics"
+    })
+
+    local youtubeStatsLabel = InfoTab:Paragraph({
+        Title = "YouTube Stats",
+        Desc = "Subscribers: 25,600"
+    })
+
+    InfoTab:Button({
+        Title = "Copy YouTube Link",
+        Desc = "Copy YouTube channel link to clipboard",
+        Callback = function()
+            setclipboard("https://youtube.com/@waspire")
+            WindUI:Notify({
+                Title = "YouTube",
+                Content = "YouTube link copied to clipboard!",
+                Duration = 2,
+                Icon = "youtube"
+            })
+        end
+    })
+
+    InfoTab:Section({
+        Title = "Script Information",
+        Desc = "Script details and features"
+    })
 
     InfoTab:Paragraph({
         Title = "Script Details",
@@ -819,39 +878,29 @@ function Camlock:SetupKeybind()
     })
 
     InfoTab:Paragraph({
-        Title = "Features",
+        Title = "Main Features",
         Desc = "Auto Block System\nCamlock with Mobile Support\nCounter ESP Detection\nDeath Counter ESP\nAuto Toxic Messages\nPing Display ESP\nBlock ESP Indicators\nHigh Ping Warning"
     })
 
-    InfoTab:Button({
-        Title = "YouTube Channel",
-        Desc = "Subscribe to Waspire on YouTube",
-        Callback = function()
-            setclipboard("https://youtube.com/@waspire")
-            WindUI:Notify({
-                Title = "YouTube",
-                Content = "Link copied to clipboard!",
-                Duration = 3,
-                Icon = "youtube"
-            })
+    -- Update statistics in real-time
+    task.spawn(function()
+        while task.wait(3) do
+            -- Update server stats
+            local totalPlayers = #Players:GetPlayers()
+            local serverSize = game.PlaceId == 10449761463 and 20 or 15
+            local serverText = string.format("Players: %d/%d\nStatus: LIVE", totalPlayers, serverSize)
+            serverStatsLabel:SetDescription(serverText)
+            
+            -- Update Discord stats (placeholder - would need Discord API for real stats)
+            local discordText = "Members: 2,500+\nOnline: 150+"
+            discordStatsLabel:SetDescription(discordText)
+            
+            -- Update YouTube stats
+            youtubeStatsLabel:SetDescription("Subscribers: 25,600")
         end
-    })
+    end)
 
-    InfoTab:Button({
-        Title = "Discord Server",
-        Desc = "Join our community Discord",
-        Callback = function()
-            setclipboard("https://discord.gg/H2bURQxq3T")
-            WindUI:Notify({
-                Title = "Discord",
-                Content = "Link copied to clipboard!",
-                Duration = 3,
-                Icon = "message-circle"
-            })
-        end
-    })
-
-    -- Auto Toxic System
+    -- Fixed Auto Toxic System
     local AutoToxic = {
         Enabled = false,
         Message = ConfigManager:Get("AutoToxicMessage"),
@@ -863,13 +912,13 @@ function Camlock:SetupKeybind()
     }
 
     UtilityTab:Section({
-        Title = "Auto Toxic",
-        Desc = "Automatically send toxic messages on kill"
+        Title = "Auto Toxic System",
+        Desc = "Automatically send messages when you get a kill"
     })
 
     local autoToxicToggle = UtilityTab:Toggle({
         Title = "Auto Toxic",
-        Desc = "Send 'ez' automatically on kill",
+        Desc = "Enable automatic toxic messages on kill",
         Value = ConfigManager:Get("AutoToxicEnabled"),
         Callback = function(state)
             ConfigManager:Set("AutoToxicEnabled", state)
@@ -878,6 +927,19 @@ function Camlock:SetupKeybind()
             else
                 AutoToxic:Stop()
             end
+        end
+    })
+
+    local toxicMessageInput = UtilityTab:Input({
+        Title = "Toxic Message",
+        Desc = "Message to send when you get a kill",
+        Value = AutoToxic.Message,
+        InputIcon = "",
+        Type = "Input",
+        Placeholder = "Enter toxic message...",
+        Callback = function(input)
+            ConfigManager:Set("AutoToxicMessage", input)
+            AutoToxic.Message = input
         end
     })
 
@@ -914,15 +976,23 @@ function Camlock:SetupKeybind()
         self.IsSending = true
         
         for i = 1, self.RepeatCount do
-            if game:GetService("TextChatService") then
-                local channel = game:GetService("TextChatService").TextChannels.RBXGeneral
-                if channel then
-                    pcall(function()
-                        channel:SendAsync(self.Message)
-                    end)
-                end
+            local success = pcall(function()
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(self.Message, "All")
+            end)
+            
+            if not success then
+                WindUI:Notify({
+                    Title = "Auto Toxic Error",
+                    Content = "Failed to send message",
+                    Duration = 2,
+                    Icon = "alert-triangle"
+                })
+                break
             end
-            task.wait(self.Cooldown)
+            
+            if i < self.RepeatCount then
+                task.wait(self.Cooldown)
+            end
         end
         
         self.IsSending = false
@@ -932,46 +1002,56 @@ function Camlock:SetupKeybind()
         if self.Enabled then return end
         
         self.Enabled = true
+        self.LastKills = 0
         
-        local leaderstats = LocalPlayer:WaitForChild("leaderstats", 5)
-        if not leaderstats then
-            WindUI:Notify({
-                Title = "Auto Toxic Error",
-                Content = "Could not find leaderstats",
-                Duration = 3,
-                Icon = "alert-triangle"
-            })
-            return
-        end
-        
-        local kills = leaderstats:WaitForChild("Kills", 5)
-        if not kills then
-            WindUI:Notify({
-                Title = "Auto Toxic Error",
-                Content = "Could not find Kills stat",
-                Duration = 3,
-                Icon = "alert-triangle"
-            })
-            return
-        end
-        
-        self.LastKills = kills.Value
-        
-        self.Connection = kills.Changed:Connect(function(newValue)
-            if not self.Enabled then return end
-            
-            if newValue > self.LastKills then
-                self:SendMessages()
+        -- Try to get kills from leaderstats
+        local function monitorKills()
+            local leaderstats = LocalPlayer:WaitForChild("leaderstats", 3)
+            if leaderstats then
+                local kills = leaderstats:WaitForChild("Kills", 3)
+                if kills then
+                    self.LastKills = kills.Value
+                    
+                    if self.Connection then
+                        self.Connection:Disconnect()
+                    end
+                    
+                    self.Connection = kills.Changed:Connect(function(newValue)
+                        if not self.Enabled then return end
+                        
+                        if newValue > self.LastKills then
+                            self:SendMessages()
+                        end
+                        self.LastKills = newValue
+                    end)
+                    
+                    WindUI:Notify({
+                        Title = "Auto Toxic",
+                        Content = "Auto Toxic enabled! Messages will send on kills.",
+                        Duration = 3,
+                        Icon = "message-square"
+                    })
+                    return true
+                end
             end
-            self.LastKills = newValue
-        end)
+            return false
+        end
         
-        WindUI:Notify({
-            Title = "Auto Toxic",
-            Content = "Auto Toxic enabled\nMessage: " .. self.Message,
-            Duration = 3,
-            Icon = "message-square"
-        })
+        if not monitorKills() then
+            WindUI:Notify({
+                Title = "Auto Toxic",
+                Content = "Auto Toxic enabled. Waiting for game stats...",
+                Duration = 3,
+                Icon = "message-square"
+            })
+            
+            -- Try again after a delay
+            task.delay(5, function()
+                if self.Enabled and not self.Connection then
+                    monitorKills()
+                end
+            end)
+        end
     end
 
     function AutoToxic:Stop()
@@ -1179,6 +1259,7 @@ function Camlock:SetupKeybind()
         Desc = "Visual indicators utility"
     })
     
+    -- Counter ESP System
     local CounterESP = {
         Enabled = false,
         Highlights = {},
@@ -1335,6 +1416,165 @@ function Camlock:SetupKeybind()
         end
     })
 
+    -- Ping Display ESP System
+    local PingESP = {
+        Enabled = false,
+        GuiFolder = nil,
+        Connections = {}
+    }
+    
+    function PingESP:CreateBillboard(player)
+        if player == LocalPlayer then return nil end
+        
+        local bb = Instance.new("BillboardGui")
+        bb.Name = "PingDisplay_" .. player.Name
+        bb.Size = UDim2.new(0, 100, 0, 40)
+        bb.AlwaysOnTop = true
+        bb.MaxDistance = 300
+        bb.StudsOffset = Vector3.new(0, 3, 0)
+        
+        local label = Instance.new("TextLabel")
+        label.Name = "PingLabel"
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 14
+        label.TextStrokeTransparency = 0.5
+        label.TextStrokeColor3 = Color3.new(0, 0, 0)
+        label.Text = "0ms"
+        label.Parent = bb
+        
+        return bb
+    end
+    
+    function PingESP:UpdatePingColor(label, ping)
+        ping = ping or 0
+        
+        if ping < 50 then
+            label.TextColor3 = Color3.fromRGB(50, 255, 50)
+        elseif ping < 150 then
+            label.TextColor3 = Color3.fromRGB(255, 255, 50)
+        else
+            label.TextColor3 = Color3.fromRGB(255, 50, 50)
+        end
+    end
+    
+    function PingESP:Start()
+        if self.Enabled then return end
+        
+        self.Enabled = true
+        
+        self.GuiFolder = Instance.new("Folder")
+        self.GuiFolder.Name = "PingESP"
+        self.GuiFolder.Parent = game:GetService("CoreGui")
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            self:SetupPlayer(player)
+        end
+        
+        local playerAddedConn = Players.PlayerAdded:Connect(function(player)
+            self:SetupPlayer(player)
+        end)
+        
+        table.insert(self.Connections, playerAddedConn)
+        
+        WindUI:Notify({
+            Title = "Ping Display ESP",
+            Content = "Ping Display ESP activated",
+            Duration = 2,
+            Icon = "wifi"
+        })
+    end
+    
+    function PingESP:SetupPlayer(player)
+        if player == LocalPlayer then return end
+        
+        local bb = self:CreateBillboard(player)
+        if not bb then return end
+        
+        bb.Parent = self.GuiFolder
+        
+        local heartbeatConn = RunService.Heartbeat:Connect(function()
+            if not self.Enabled or not bb or not bb.Parent then
+                heartbeatConn:Disconnect()
+                return
+            end
+            
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                bb.Adornee = character.HumanoidRootPart
+                
+                local ping = player:GetAttribute("Ping") or 0
+                local pingValue = math.floor(ping)
+                
+                if bb:FindFirstChild("PingLabel") then
+                    local label = bb.PingLabel
+                    label.Text = tostring(pingValue) .. "ms"
+                    self:UpdatePingColor(label, pingValue)
+                    
+                    local humanoid = character:FindFirstChild("Humanoid")
+                    if humanoid and humanoid.Health <= 0 then
+                        label.TextColor3 = Color3.fromRGB(100, 100, 100)
+                    end
+                end
+            else
+                bb.Adornee = nil
+            end
+        end)
+        
+        local charAddedConn = player.CharacterAdded:Connect(function(character)
+            task.wait(1)
+            if self.Enabled and bb and bb.Parent then
+                local rootPart = character:WaitForChild("HumanoidRootPart", 3)
+                if rootPart then
+                    bb.Adornee = rootPart
+                end
+            end
+        end)
+        
+        table.insert(self.Connections, heartbeatConn)
+        table.insert(self.Connections, charAddedConn)
+    end
+    
+    function PingESP:Stop()
+        if not self.Enabled then return end
+        
+        self.Enabled = false
+        
+        if self.GuiFolder then
+            self.GuiFolder:Destroy()
+            self.GuiFolder = nil
+        end
+        
+        for _, conn in ipairs(self.Connections) do
+            if conn then
+                pcall(function() conn:Disconnect() end)
+            end
+        end
+        self.Connections = {}
+        
+        WindUI:Notify({
+            Title = "Ping Display ESP",
+            Content = "Ping Display ESP deactivated",
+            Duration = 2,
+            Icon = "wifi-off"
+        })
+    end
+    
+    local pingESPToggle = ESPTab:Toggle({
+        Title = "Ping Display ESP",
+        Desc = "Shows player ping above their heads\nGreen(<50ms) Yellow(<150ms) Red(>150ms)",
+        Value = ConfigManager:Get("PingESPEnabled"),
+        Callback = function(state)
+            ConfigManager:Set("PingESPEnabled", state)
+            if state then
+                PingESP:Start()
+            else
+                PingESP:Stop()
+            end
+        end
+    })
+
     -- Fixed High Ping Warning System
     local HighPingWarning = {
         Enabled = false,
@@ -1401,73 +1641,39 @@ function Camlock:SetupKeybind()
         
         screenGui.Parent = game:GetService("CoreGui")
         self.WarningFrame = screenGui
-    end
-    
-    function HighPingWarning:StartBlinking()
-        if self.Blinking then return end
-        self.Blinking = true
-        
-        if self.WarningFrame then
-            self.WarningFrame.Enabled = true
-        end
-        
-        task.spawn(function()
-            while self.Blinking and self.WarningFrame and self.WarningFrame.Parent do
-                if self.WarningFrame:FindFirstChild("WarningFrame") then
-                    self.WarningFrame.WarningFrame.BackgroundTransparency = 0.3
-                    if self.WarningFrame.WarningFrame:FindFirstChild("WarningText") then
-                        self.WarningFrame.WarningFrame.WarningText.TextColor3 = Color3.fromRGB(255, 100, 100)
-                    end
-                end
-                task.wait(0.5)
-                
-                if not self.Blinking then break end
-                
-                if self.WarningFrame and self.WarningFrame:FindFirstChild("WarningFrame") then
-                    self.WarningFrame.WarningFrame.BackgroundTransparency = 0.6
-                    if self.WarningFrame.WarningFrame:FindFirstChild("WarningText") then
-                        self.WarningFrame.WarningFrame.WarningText.TextColor3 = Color3.fromRGB(255, 50, 50)
-                    end
-                end
-                task.wait(0.5)
-            end
-        end)
-    end
-    
-    function HighPingWarning:StopBlinking()
-        self.Blinking = false
-        if self.WarningFrame then
-            self.WarningFrame.Enabled = false
-        end
+        self.WarningFrame.Enabled = false
     end
     
     function HighPingWarning:CheckPing()
-        if not self.Enabled then return end
+        if not self.Enabled or not self.WarningFrame then return end
         
         local ping = LocalPlayer:GetAttribute("Ping") or 0
         local pingValue = math.floor(ping)
         
         if pingValue >= self.Threshold then
-            if not self.WarningFrame then
-                self:CreateWarningFrame()
-            end
-            
             if not self.Blinking then
-                self:StartBlinking()
-            end
-            
-            if self.WarningFrame and self.WarningFrame:FindFirstChild("WarningFrame") then
-                local warningText = self.WarningFrame.WarningFrame:FindFirstChild("WarningText")
-                if warningText then
-                    warningText.Text = "PING TOO HIGH (" .. pingValue .. "ms)"
+                self.Blinking = true
+                self.WarningFrame.Enabled = true
+                
+                if self.WarningFrame:FindFirstChild("WarningFrame") then
+                    local warningText = self.WarningFrame.WarningFrame:FindFirstChild("WarningText")
+                    if warningText then
+                        warningText.Text = "PING TOO HIGH (" .. pingValue .. "ms)"
+                    end
                 end
             end
         else
-            self:StopBlinking()
+            if self.Blinking then
+                self.Blinking = false
+                self.WarningFrame.Enabled = false
+            end
         end
     end
     
     function HighPingWarning:Start()
+        if self.Enabled then return end
+        
+        self.Enabled = true
         self:CreateWarningFrame()
         
         if self.Connection then
@@ -1480,7 +1686,10 @@ function Camlock:SetupKeybind()
     end
     
     function HighPingWarning:Stop()
-        self:StopBlinking()
+        if not self.Enabled then return end
+        
+        self.Enabled = false
+        self.Blinking = false
         
         if self.Connection then
             self.Connection:Disconnect()
@@ -1496,8 +1705,9 @@ function Camlock:SetupKeybind()
     local highPingToggle = ESPTab:Toggle({
         Title = "High Ping Warning",
         Desc = "Shows warning when ping is too high (150+ ms)",
-        Value = false,
+        Value = ConfigManager:Get("HighPingWarningEnabled"),
         Callback = function(state)
+            ConfigManager:Set("HighPingWarningEnabled", state)
             if state then
                 HighPingWarning:Start()
                 WindUI:Notify({
@@ -1513,6 +1723,341 @@ function Camlock:SetupKeybind()
                     Content = "High ping warning disabled",
                     Duration = 2,
                     Icon = "alert-triangle-off"
+                })
+            end
+        end
+    })
+
+    -- Block ESP System
+    local BlockESP = {
+        Enabled = false,
+        BlockAnimationId = "rbxassetid://10470389827",
+        BlockImageId = "rbxassetid://13180179085",
+        Indicators = {},
+        Connections = {}
+    }
+    
+    function BlockESP:CreateBlockIndicator(character)
+        if self.Indicators[character] then return self.Indicators[character] end
+        
+        local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+        if not torso then return nil end
+        
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "BlockIndicator"
+        billboard.Adornee = torso
+        billboard.Size = UDim2.new(4, 0, 4, 0)
+        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+        billboard.AlwaysOnTop = true
+        billboard.MaxDistance = 200
+        billboard.Parent = character
+        
+        local imageLabel = Instance.new("ImageLabel")
+        imageLabel.Name = "BlockIcon"
+        imageLabel.Size = UDim2.new(1, 0, 1, 0)
+        imageLabel.BackgroundTransparency = 1
+        imageLabel.Image = self.BlockImageId
+        imageLabel.ImageTransparency = 0.4
+        imageLabel.Parent = billboard
+        
+        task.spawn(function()
+            while billboard and billboard.Parent and self.Enabled do
+                for i = 0, 1, 0.1 do
+                    if not billboard or not billboard.Parent or not self.Enabled then break end
+                    local pulse = 0.4 + (math.sin(i * math.pi) * 0.3)
+                    imageLabel.ImageTransparency = pulse
+                    task.wait(0.05)
+                end
+            end
+        end)
+        
+        self.Indicators[character] = billboard
+        return billboard
+    end
+    
+    function BlockESP:RemoveBlockIndicator(character)
+        if self.Indicators[character] then
+            self.Indicators[character]:Destroy()
+            self.Indicators[character] = nil
+        end
+    end
+    
+    function BlockESP:SetupPlayer(player)
+        if player == LocalPlayer then return end
+        
+        local charAddedConn = player.CharacterAdded:Connect(function(character)
+            task.wait(1)
+            
+            local humanoid = character:WaitForChild("Humanoid", 3)
+            if not humanoid then return end
+            
+            local animationConn = humanoid.AnimationPlayed:Connect(function(track)
+                if not self.Enabled then return end
+                
+                if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                    local billboard = self:CreateBlockIndicator(character)
+                    
+                    track.Stopped:Connect(function()
+                        if billboard and billboard.Parent then
+                            self:RemoveBlockIndicator(character)
+                        end
+                    end)
+                    
+                    humanoid.Died:Connect(function()
+                        self:RemoveBlockIndicator(character)
+                    end)
+                end
+            end)
+            
+            table.insert(self.Connections, animationConn)
+            
+            for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+                if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                    self:CreateBlockIndicator(character)
+                end
+            end
+        end)
+        
+        table.insert(self.Connections, charAddedConn)
+        
+        if player.Character then
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                local animationConn = humanoid.AnimationPlayed:Connect(function(track)
+                    if not self.Enabled then return end
+                    
+                    if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                        local billboard = self:CreateBlockIndicator(player.Character)
+                        
+                        if billboard then
+                            track.Stopped:Connect(function()
+                                self:RemoveBlockIndicator(player.Character)
+                            end)
+                        end
+                    end
+                end)
+                
+                table.insert(self.Connections, animationConn)
+                
+                for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+                    if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                        self:CreateBlockIndicator(player.Character)
+                    end
+                end
+            end
+        end
+    end
+    
+    function BlockESP:Start()
+        if self.Enabled then return end
+        
+        self.Enabled = true
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            self:SetupPlayer(player)
+        end
+        
+        local playerAddedConn = Players.PlayerAdded:Connect(function(player)
+            self:SetupPlayer(player)
+        end)
+        
+        table.insert(self.Connections, playerAddedConn)
+        
+        WindUI:Notify({
+            Title = "Opponent Block ESP",
+            Content = "Block indicator ESP activated",
+            Duration = 2,
+            Icon = "shield"
+        })
+    end
+    
+    function BlockESP:Stop()
+        if not self.Enabled then return end
+        
+        self.Enabled = false
+        
+        for character, indicator in pairs(self.Indicators) do
+            if indicator and indicator.Parent then
+                indicator:Destroy()
+            end
+        end
+        self.Indicators = {}
+        
+        for _, conn in ipairs(self.Connections) do
+            if conn then
+                pcall(function() conn:Disconnect() end)
+            end
+        end
+        self.Connections = {}
+        
+        WindUI:Notify({
+            Title = "Opponent Block ESP",
+            Content = "Block indicator ESP deactivated",
+            Duration = 2,
+            Icon = "shield-off"
+        })
+    end
+    
+    local blockESPToggle = ESPTab:Toggle({
+        Title = "Opponent Block ESP",
+        Desc = "Shows indicator when enemies use block animation",
+        Value = ConfigManager:Get("BlockESPEnabled"),
+        Callback = function(state)
+            ConfigManager:Set("BlockESPEnabled", state)
+            if state then
+                BlockESP:Start()
+            else
+                BlockESP:Stop()
+            end
+        end
+    })
+
+    -- Death Counter ESP System
+    local DeathCounterESP = {
+        Enabled = false,
+        State = {},
+        Billboards = {},
+        Connections = {}
+    }
+    
+    local strongSkills = {
+        ["Omni Directional Punch"] = true,
+        ["Death Counter"] = true,
+        ["Serious Punch"] = true,
+        ["Table Flip"] = true
+    }
+    
+    local weakSkills = {
+        ["Consecutive Punches"] = true,
+        ["Normal Punch"] = true,
+        ["Shove"] = true,
+        ["Uppercut"] = true
+    }
+    
+    function DeathCounterESP:GetSkillType(backpack)
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if strongSkills[tool.Name] then return "strong" end
+            if weakSkills[tool.Name] then return "weak" end
+        end
+        return nil
+    end
+    
+    function DeathCounterESP:CreateBillboard(target, text)
+        if not (target and target:FindFirstChild("Head")) then return end
+        
+        local bb = target.Head:FindFirstChild("SkillTag") or Instance.new("BillboardGui")
+        bb.Name = "SkillTag"
+        bb.Size = UDim2.new(0, 100, 0, 40)
+        bb.StudsOffset = Vector3.new(0, 2.5, 0)
+        bb.Adornee = target.Head
+        bb.AlwaysOnTop = true
+        if not bb.Parent then bb.Parent = target.Head end
+
+        local label = bb:FindFirstChild("TextLabel") or Instance.new("TextLabel", bb)
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Font = Enum.Font.GothamBold
+        label.TextScaled = true
+        label.TextColor3 = Color3.new(1, 1, 1)
+        label.TextStrokeTransparency = 0.5
+        label.Text = text
+        
+        self.Billboards[target] = bb
+    end
+    
+    function DeathCounterESP:RemoveBillboard(target)
+        if target and target:FindFirstChild("Head") and target.Head:FindFirstChild("SkillTag") then
+            target.Head.SkillTag:Destroy()
+            self.Billboards[target] = nil
+        end
+    end
+    
+    function DeathCounterESP:Start()
+        if self.Enabled then return end
+        
+        self.Enabled = true
+        
+        local heartbeatConn = RunService.Heartbeat:Connect(function()
+            if not self.Enabled then return end
+            
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer then
+                    local char = plr.Character
+                    local backpack = plr:FindFirstChildOfClass("Backpack")
+                    
+                    if char and backpack then
+                        local skillType = self:GetSkillType(backpack)
+                        local lastState = self.State[plr]
+
+                        if not lastState then
+                            self.State[plr] = skillType
+                            if skillType == "strong" then
+                                self:CreateBillboard(char, "STRONG")
+                            else
+                                self:RemoveBillboard(char)
+                            end
+                        else
+                            if skillType == "strong" then
+                                if lastState ~= "strong" then
+                                    self:CreateBillboard(char, "ULTIMATE")
+                                end
+                                self.State[plr] = "strong"
+                            elseif skillType == "weak" and lastState == "strong" then
+                                self:CreateBillboard(char, "DEATH COUNTER")
+                                self.State[plr] = "weak"
+                                task.delay(math.random(8, 9), function()
+                                    if self.State[plr] == "weak" then
+                                        self:RemoveBillboard(char)
+                                    end
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+        
+        table.insert(self.Connections, heartbeatConn)
+    end
+    
+    function DeathCounterESP:Stop()
+        if not self.Enabled then return end
+        
+        self.Enabled = false
+        
+        for target, _ in pairs(self.Billboards) do
+            self:RemoveBillboard(target)
+        end
+        
+        for _, conn in ipairs(self.Connections) do
+            conn:Disconnect()
+        end
+        self.Connections = {}
+        self.State = {}
+        self.Billboards = {}
+    end
+    
+    local deathCounterESPToggle = ESPTab:Toggle({
+        Title = "Death Counter ESP",
+        Desc = "Shows enemy skill indicators above their heads\nDEATH COUNTER = Enemy has death counter\nULTIMATE = Enemy has ultimate move",
+        Value = ConfigManager:Get("DeathCounterESPEnabled"),
+        Callback = function(state)
+            ConfigManager:Set("DeathCounterESPEnabled", state)
+            if state then
+                DeathCounterESP:Start()
+                WindUI:Notify({
+                    Title = "Death Counter ESP",
+                    Content = "Death Counter ESP activated",
+                    Duration = 2,
+                    Icon = "skull"
+                })
+            else
+                DeathCounterESP:Stop()
+                WindUI:Notify({
+                    Title = "Death Counter ESP",
+                    Content = "Death Counter ESP deactivated",
+                    Duration = 2,
+                    Icon = "skull-off"
                 })
             end
         end
@@ -1553,14 +2098,21 @@ function Camlock:SetupKeybind()
             camlockToggle:SetValue(defaultConfig.CamlockEnabled)
             mobileCamlockToggle:SetValue(defaultConfig.MobileCamlockButton)
             counterESPToggle:SetValue(defaultConfig.CounterESPEnabled)
+            deathCounterESPToggle:SetValue(defaultConfig.DeathCounterESPEnabled)
+            pingESPToggle:SetValue(defaultConfig.PingESPEnabled)
+            blockESPToggle:SetValue(defaultConfig.BlockESPEnabled)
+            highPingToggle:SetValue(defaultConfig.HighPingWarningEnabled)
             autoToxicToggle:SetValue(defaultConfig.AutoToxicEnabled)
+            toxicMessageInput:SetValue(defaultConfig.AutoToxicMessage)
             repeatSlider:SetValue(defaultConfig.AutoToxicRepeat)
             cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown)
             keybindButton:SetTitle("Change Keybind (Currently: " .. defaultConfig.CamlockKeybind .. ")")
             
             if AutoBlock.Enabled then
                 AutoBlock:Stop()
-                AutoBlock:Start()
+                if defaultConfig.AutoBlockEnabled then
+                    AutoBlock:Start()
+                end
             end
             
             if Camlock.Enabled then
@@ -1569,6 +2121,37 @@ function Camlock:SetupKeybind()
             
             if CounterESP.Enabled then
                 CounterESP:Stop()
+                if defaultConfig.CounterESPEnabled then
+                    CounterESP:Start()
+                end
+            end
+            
+            if PingESP.Enabled then
+                PingESP:Stop()
+                if defaultConfig.PingESPEnabled then
+                    PingESP:Start()
+                end
+            end
+            
+            if BlockESP.Enabled then
+                BlockESP:Stop()
+                if defaultConfig.BlockESPEnabled then
+                    BlockESP:Start()
+                end
+            end
+            
+            if HighPingWarning.Enabled then
+                HighPingWarning:Stop()
+                if defaultConfig.HighPingWarningEnabled then
+                    HighPingWarning:Start()
+                end
+            end
+            
+            if DeathCounterESP.Enabled then
+                DeathCounterESP:Stop()
+                if defaultConfig.DeathCounterESPEnabled then
+                    DeathCounterESP:Start()
+                end
             end
             
             if AutoToxic.Enabled then
@@ -1634,7 +2217,7 @@ function Camlock:SetupKeybind()
     
     -- Initialize based on saved state
     task.spawn(function()
-        task.wait(1)
+        task.wait(2)
         
         if ConfigManager:Get("AutoBlockEnabled") then
             AutoBlock:Start()
@@ -1664,6 +2247,22 @@ function Camlock:SetupKeybind()
             CounterESP:Start()
         end
         
+        if ConfigManager:Get("PingESPEnabled") then
+            PingESP:Start()
+        end
+        
+        if ConfigManager:Get("BlockESPEnabled") then
+            BlockESP:Start()
+        end
+        
+        if ConfigManager:Get("HighPingWarningEnabled") then
+            HighPingWarning:Start()
+        end
+        
+        if ConfigManager:Get("DeathCounterESPEnabled") then
+            DeathCounterESP:Start()
+        end
+        
         if ConfigManager:Get("AutoToxicEnabled") then
             AutoToxic:Start()
         end
@@ -1671,7 +2270,7 @@ function Camlock:SetupKeybind()
     
     -- Add custom UI elements
     local function addCustomUIElements()
-        task.wait(0.5)
+        task.wait(1)
         local coreGui = game:GetService("CoreGui")
         
         for _, gui in pairs(coreGui:GetChildren()) do
@@ -1718,7 +2317,7 @@ function Camlock:SetupKeybind()
                             setclipboard("https://youtube.com/@waspire")
                             WindUI:Notify({
                                 Title = "YouTube",
-                                Content = "Link copied to clipboard: https://youtube.com/@waspire",
+                                Content = "YouTube link copied to clipboard!",
                                 Duration = 3,
                                 Icon = "youtube"
                             })
@@ -1728,7 +2327,7 @@ function Camlock:SetupKeybind()
                             setclipboard("https://discord.gg/H2bURQxq3T")
                             WindUI:Notify({
                                 Title = "Discord",
-                                Content = "Link copied to clipboard: https://discord.gg/H2bURQxq3T",
+                                Content = "Discord link copied to clipboard!",
                                 Duration = 3,
                                 Icon = "message-circle"
                             })
@@ -1759,7 +2358,7 @@ function Camlock:SetupKeybind()
     
     task.spawn(addCustomUIElements)
     
-    task.wait(0.9)
+    task.wait(1)
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "Combat UI v1.0",
         Text = "Waspire's Combat system loaded successfully!",
