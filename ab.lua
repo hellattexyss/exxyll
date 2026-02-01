@@ -101,7 +101,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     
     local Window = WindUI:CreateWindow({
         Title = "Combat UI - Waspire",
-        Icon = "rbxassetid://125242807265435",
+        Icon = "shield",
         Author = "The Strongest Battlegrounds",
         Folder = "CombatGUI",
         Size = UDim2.fromOffset(620, 140),
@@ -773,7 +773,7 @@ function Camlock:SetupKeybind()
     
     local UtilityTab = Window:Tab({
         Title = "Utility",
-        Icon = "tool",
+        Icon = "pickaxe",
         Locked = false,
     })
     
