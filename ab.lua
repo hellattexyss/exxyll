@@ -332,7 +332,7 @@ local Camlock = {
     KeybindConnection = nil,
     InputService = game:GetService("UserInputService"),
     LastClickTime = 0,
-    ClickCooldown = 0.3
+    ClickCooldown = 0.3,
      -- ... existing properties ...
     IsDragging = false,
     DragStart = nil,
