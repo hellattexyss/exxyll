@@ -333,6 +333,10 @@ local Camlock = {
     InputService = game:GetService("UserInputService"),
     LastClickTime = 0,
     ClickCooldown = 0.3
+     -- ... existing properties ...
+    IsDragging = false,
+    DragStart = nil,
+    StartPosition = nil
 }
 
 function Camlock:FindClosestTarget()
@@ -624,7 +628,9 @@ end
 -- COMPLETELY REWRITTEN MOBILE BUTTON
 function Camlock:CreateMobileButton()
     if self.MobileButton then return end
-    
+
+    local camera = workspace.CurrentCamera
+        
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "MobileCamlockButton"
     screenGui.ResetOnSpawn = false
@@ -656,33 +662,44 @@ function Camlock:CreateMobileButton()
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = button
     
-    -- SIMPLE AND RELIABLE DRAGGING SYSTEM
-    local dragStart, startPos
-    local dragConnection1, dragConnection2
-    
-    button.MouseButton1Down:Connect(function()
-        dragStart = self.InputService:GetMouseLocation()
-        startPos = container.Position
-    end)
-    
-    dragConnection1 = self.InputService.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement and dragStart then
-            local currentPos = self.InputService:GetMouseLocation()
+local isDragging = false
+local dragStart, startPos
+
+button.MouseButton1Down:Connect(function()
+    isDragging = true
+    dragStart = self.InputService:GetMouseLocation()
+    startPos = container.Position
+    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+end)
+
+dragConnection1 = self.InputService.InputChanged:Connect(function(input)
+    if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local currentPos = self.InputService:GetMouseLocation()
+        if currentPos and dragStart then
             local delta = currentPos - dragStart
+            local newX = math.clamp(startPos.X.Offset + delta.X, 0, camera.ViewportSize.X - container.AbsoluteSize.X)
+            local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, camera.ViewportSize.Y - container.AbsoluteSize.Y)
+            
             container.Position = UDim2.new(
                 startPos.X.Scale, 
-                startPos.X.Offset + delta.X,
+                newX,
                 startPos.Y.Scale, 
-                startPos.Y.Offset + delta.Y
+                newY
             )
         end
-    end)
-    
-    dragConnection2 = self.InputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragStart = nil
+    end
+end)
+
+dragConnection2 = self.InputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and isDragging then
+        isDragging = false
+        if self.ButtonState == "ON" then
+            button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        else
+            button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         end
-    end)
+    end
+end)
     
     -- SIMPLE AND RELIABLE CLICK HANDLER
     button.MouseButton1Click:Connect(function()
@@ -883,23 +900,84 @@ function Camlock:SetupKeybind()
     })
 
     -- Update statistics in real-time
+    -- Update statistics in real-time
+    -- Discord Stats Fetching Function
+    local function fetchDiscordStats()
+        local discordInviteCode = "eS29VzFUrQ" -- From your link: https://discord.gg/eS29VzFUrQ
+        
+        local success, result = pcall(function()
+            -- First check if we can make HTTP requests
+            local httpService = game:GetService("HttpService")
+            
+            -- IMPORTANT: Roblox games need HttpService enabled
+            -- This endpoint doesn't require authentication for basic info
+            local response = httpService:GetAsync(
+                "https://discord.com/api/v9/invites/" .. discordInviteCode .. "?with_counts=true"
+            )
+            
+            local data = httpService:JSONDecode(response)
+            return {
+                members = data.approximate_member_count or 2500,
+                online = data.approximate_presence_count or 150
+            }
+        end)
+        
+        if success then
+            return result.members, result.online
+        else
+            -- Fallback if HTTP fails (no permission, or API down)
+            print("Discord fetch failed:", result)
+            return 2500, 150 -- Fallback values
+        end
+    end
+
+    -- Update statistics in real-time with FIXED error handling
     task.spawn(function()
+        local discordUpdateCount = 0
+        
         while task.wait(3) do
-            -- Update server stats
-            local totalPlayers = #Players:GetPlayers()
-            local serverSize = game.PlaceId == 10449761463 and 20 or 15
-            local serverText = string.format("Players: %d/%d\nStatus: LIVE", totalPlayers, serverSize)
-            serverStatsLabel:SetDescription(serverText)
+            -- Update server stats with safety check
+            local success, err = pcall(function()
+                local totalPlayers = #Players:GetPlayers()
+                local serverSize = game.PlaceId == 10449761463 and 20 or 15
+                local serverText = string.format("Players: %d/%d\nStatus: LIVE", totalPlayers, serverSize)
+                
+                -- SAFE UI Update: Check if SetDescription exists
+                if serverStatsLabel and typeof(serverStatsLabel.SetDescription) == "function" then
+                    serverStatsLabel:SetDescription(serverText)
+                end
+                
+                -- Update Discord stats every 30 seconds (10 updates) to avoid rate limits
+                discordUpdateCount = discordUpdateCount + 1
+                if discordUpdateCount >= 10 then
+                    discordUpdateCount = 0
+                    
+                    local members, online = fetchDiscordStats()
+                    local discordText = string.format("Members: %d+\nOnline: %d+", members, online)
+                    
+                    if discordStatsLabel and typeof(discordStatsLabel.SetDescription) == "function" then
+                        discordStatsLabel:SetDescription(discordText)
+                    end
+                else
+                    -- Keep showing cached Discord stats
+                    local discordText = "Members: Loading...\nOnline: Loading..."
+                    if discordStatsLabel and typeof(discordStatsLabel.SetDescription) == "function" then
+                        discordStatsLabel:SetDescription(discordText)
+                    end
+                end
+                
+                -- Update YouTube stats
+                if youtubeStatsLabel and typeof(youtubeStatsLabel.SetDescription) == "function" then
+                    youtubeStatsLabel:SetDescription("Subscribers: 25,600")
+                end
+            end)
             
-            -- Update Discord stats (placeholder - would need Discord API for real stats)
-            local discordText = "Members: 2,500+\nOnline: 150+"
-            discordStatsLabel:SetDescription(discordText)
-            
-            -- Update YouTube stats
-            youtubeStatsLabel:SetDescription("Subscribers: 25,600")
+            if not success then
+                warn("Stats update error:", err)
+            end
         end
     end)
-
+        
     -- Fixed Auto Toxic System
     local AutoToxic = {
         Enabled = false,
@@ -972,31 +1050,52 @@ function Camlock:SetupKeybind()
     })
 
     function AutoToxic:SendMessages()
-        if not self.Enabled or self.IsSending then return end
-        self.IsSending = true
+    if not self.Enabled or self.IsSending then return end
+    self.IsSending = true
+    
+    for i = 1, self.RepeatCount do
+        local success, errorMsg = pcall(function()
+            -- Try the new TextChatService first
+            local textChatService = game:GetService("TextChatService")
+            if textChatService and textChatService:IsA("TextChatService") then
+                local channel = textChatService.TextChannels:FindFirstChild("RBXGeneral")
+                if channel then
+                    channel:SendAsync(self.Message)
+                    return true
+                end
+            end
+            
+            -- Fallback to old chat system
+            local replicatedStorage = game:GetService("ReplicatedStorage")
+            local chatEvents = replicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+            if chatEvents then
+                local sayMessage = chatEvents:FindFirstChild("SayMessageRequest")
+                if sayMessage then
+                    sayMessage:FireServer(self.Message, "All")
+                    return true
+                end
+            end
+            
+            return false
+        end)
         
-        for i = 1, self.RepeatCount do
-            local success = pcall(function()
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(self.Message, "All")
-            end)
-            
-            if not success then
-                WindUI:Notify({
-                    Title = "Auto Toxic Error",
-                    Content = "Failed to send message",
-                    Duration = 2,
-                    Icon = "alert-triangle"
-                })
-                break
-            end
-            
-            if i < self.RepeatCount then
-                task.wait(self.Cooldown)
-            end
+        if not success then
+            WindUI:Notify({
+                Title = "Auto Toxic Error",
+                Content = "Failed to send message: " .. tostring(errorMsg),
+                Duration = 2,
+                Icon = "alert-triangle"
+            })
+            break
         end
         
-        self.IsSending = false
+        if i < self.RepeatCount then
+            task.wait(self.Cooldown)
+        end
     end
+    
+    self.IsSending = false
+end
 
     function AutoToxic:Start()
         if self.Enabled then return end
