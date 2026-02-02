@@ -867,7 +867,7 @@ function Camlock:SetupKeybind()
 
     local discordStatsLabel = InfoTab:Paragraph({
         Title = "Discord Stats",
-        Desc = "Members: Loading...\nOnline: Loading..."
+        Desc = "Members: 32100\nOnline: 4000"
     })
 
     InfoTab:Button({
