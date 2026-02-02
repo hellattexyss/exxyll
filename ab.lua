@@ -2091,18 +2091,18 @@ end
                         if not lastState then
                             self.State[plr] = skillType
                             if skillType == "strong" then
-                                self:CreateBillboard(char, "STRONG")
+                                self:CreateBillboard(char, "💥")
                             else
                                 self:RemoveBillboard(char)
                             end
                         else
                             if skillType == "strong" then
                                 if lastState ~= "strong" then
-                                    self:CreateBillboard(char, "ULTIMATE")
+                                    self:CreateBillboard(char, "💥")
                                 end
                                 self.State[plr] = "strong"
                             elseif skillType == "weak" and lastState == "strong" then
-                                self:CreateBillboard(char, "DEATH COUNTER")
+                                self:CreateBillboard(char, "💢")
                                 self.State[plr] = "weak"
                                 task.delay(math.random(8, 9), function()
                                     if self.State[plr] == "weak" then
@@ -2138,7 +2138,7 @@ end
     
     local deathCounterESPToggle = ESPTab:Toggle({
         Title = "Death Counter ESP",
-        Desc = "Shows enemy skill indicators above their heads\nDEATH COUNTER = Enemy has death counter\nULTIMATE = Enemy has ultimate move",
+        Desc = "Shows enemy skill indicators above their heads\n💢 = Death Counter\n💥 = Ultimate",
         Value = ConfigManager:Get("DeathCounterESPEnabled"),
         Callback = function(state)
             ConfigManager:Set("DeathCounterESPEnabled", state)
