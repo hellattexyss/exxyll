@@ -630,7 +630,7 @@ function Camlock:CreateMobileButton()
     if self.MobileButton then return end
 
     local camera = workspace.CurrentCamera
-        
+    
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "MobileCamlockButton"
     screenGui.ResetOnSpawn = false
@@ -662,53 +662,65 @@ function Camlock:CreateMobileButton()
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = button
     
-local isDragging = false
-local dragStart, startPos
-
-button.MouseButton1Down:Connect(function()
-    isDragging = true
-    dragStart = self.InputService:GetMouseLocation()
-    startPos = container.Position
-    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-end)
-
-dragConnection1 = self.InputService.InputChanged:Connect(function(input)
-    if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local currentPos = self.InputService:GetMouseLocation()
-        if currentPos and dragStart then
-            local delta = currentPos - dragStart
-            local newX = math.clamp(startPos.X.Offset + delta.X, 0, camera.ViewportSize.X - container.AbsoluteSize.X)
-            local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, camera.ViewportSize.Y - container.AbsoluteSize.Y)
-            
-            container.Position = UDim2.new(
-                startPos.X.Scale, 
-                newX,
-                startPos.Y.Scale, 
-                newY
-            )
-        end
-    end
-end)
-
-dragConnection2 = self.InputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 and isDragging then
-        isDragging = false
-        if self.ButtonState == "ON" then
-            button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        else
-            button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        end
-    end
-end)
+    -- Store dragging state as local variables (NOT in self)
+    local isDragging = false
+    local dragStart, startPos
     
-    -- SIMPLE AND RELIABLE CLICK HANDLER
+    -- Input connections for dragging
+    local dragConnection1 = self.InputService.InputChanged:Connect(function(input)
+        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local currentPos = self.InputService:GetMouseLocation()
+            if currentPos and dragStart then
+                local delta = currentPos - dragStart
+                local newX = math.clamp(startPos.X.Offset + delta.X, 0, camera.ViewportSize.X - container.AbsoluteSize.X)
+                local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, camera.ViewportSize.Y - container.AbsoluteSize.Y)
+                
+                container.Position = UDim2.new(
+                    startPos.X.Scale, 
+                    newX,
+                    startPos.Y.Scale, 
+                    newY
+                )
+            end
+        end
+    end)
+    
+    local dragConnection2 = self.InputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and isDragging then
+            isDragging = false
+            if self.ButtonState == "ON" then
+                button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            else
+                button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            end
+        end
+    end)
+    
+    -- Mouse down event
+    button.MouseButton1Down:Connect(function()
+        isDragging = true
+        dragStart = self.InputService:GetMouseLocation()
+        startPos = container.Position
+        button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end)
+    
+    -- Click event (only triggers when not dragging)
+    local clickCooldown = 0.3
+    local lastClickTime = 0
+    
     button.MouseButton1Click:Connect(function()
         local currentTime = tick()
-        if currentTime - self.LastClickTime < self.ClickCooldown then
+        if currentTime - lastClickTime < clickCooldown then
             return
         end
         
-        self.LastClickTime = currentTime
+        lastClickTime = currentTime
+        
+        -- Only toggle if we're not dragging
+        if isDragging then
+            isDragging = false
+            return
+        end
         
         -- Toggle camlock
         if self.Enabled then
@@ -718,7 +730,7 @@ end)
         end
     end)
     
-    -- Store connections for cleanup
+    -- Store connections
     table.insert(self.Connections, dragConnection1)
     table.insert(self.Connections, dragConnection2)
     
@@ -899,84 +911,45 @@ function Camlock:SetupKeybind()
         Desc = "Auto Block System\nCamlock with Mobile Support\nCounter ESP Detection\nDeath Counter ESP\nAuto Toxic Messages\nPing Display ESP\nBlock ESP Indicators\nHigh Ping Warning"
     })
 
-    -- Update statistics in real-time
-    -- Update statistics in real-time
-    -- Discord Stats Fetching Function
-    local function fetchDiscordStats()
-        local discordInviteCode = "eS29VzFUrQ" -- From your link: https://discord.gg/eS29VzFUrQ
-        
-        local success, result = pcall(function()
-            -- First check if we can make HTTP requests
-            local httpService = game:GetService("HttpService")
-            
-            -- IMPORTANT: Roblox games need HttpService enabled
-            -- This endpoint doesn't require authentication for basic info
-            local response = httpService:GetAsync(
-                "https://discord.com/api/v9/invites/" .. discordInviteCode .. "?with_counts=true"
-            )
-            
-            local data = httpService:JSONDecode(response)
-            return {
-                members = data.approximate_member_count or 2500,
-                online = data.approximate_presence_count or 150
-            }
-        end)
-        
-        if success then
-            return result.members, result.online
-        else
-            -- Fallback if HTTP fails (no permission, or API down)
-            print("Discord fetch failed:", result)
-            return 2500, 150 -- Fallback values
-        end
-    end
+    -- Replace the entire fetchDiscordStats function and update loop with this:
 
-    -- Update statistics in real-time with FIXED error handling
-    task.spawn(function()
-        local discordUpdateCount = 0
-        
-        while task.wait(3) do
-            -- Update server stats with safety check
-            local success, err = pcall(function()
-                local totalPlayers = #Players:GetPlayers()
-                local serverSize = game.PlaceId == 10449761463 and 20 or 15
-                local serverText = string.format("Players: %d/%d\nStatus: LIVE", totalPlayers, serverSize)
-                
-                -- SAFE UI Update: Check if SetDescription exists
-                if serverStatsLabel and typeof(serverStatsLabel.SetDescription) == "function" then
-                    serverStatsLabel:SetDescription(serverText)
-                end
-                
-                -- Update Discord stats every 30 seconds (10 updates) to avoid rate limits
-                discordUpdateCount = discordUpdateCount + 1
-                if discordUpdateCount >= 10 then
-                    discordUpdateCount = 0
-                    
-                    local members, online = fetchDiscordStats()
-                    local discordText = string.format("Members: %d+\nOnline: %d+", members, online)
-                    
-                    if discordStatsLabel and typeof(discordStatsLabel.SetDescription) == "function" then
-                        discordStatsLabel:SetDescription(discordText)
-                    end
-                else
-                    -- Keep showing cached Discord stats
-                    local discordText = "Members: Loading...\nOnline: Loading..."
-                    if discordStatsLabel and typeof(discordStatsLabel.SetDescription) == "function" then
-                        discordStatsLabel:SetDescription(discordText)
-                    end
-                end
-                
-                -- Update YouTube stats
-                if youtubeStatsLabel and typeof(youtubeStatsLabel.SetDescription) == "function" then
-                    youtubeStatsLabel:SetDescription("Subscribers: 25,600")
-                end
-            end)
+local function getDiscordStats()
+    -- Since Roblox HTTP may be restricted, use fallback values
+    -- You can manually update these occasionally
+    return {
+        members = 32,100+,  -- Your approximate member count
+        online = 4000+     -- Your approximate online count
+    }
+end
+
+-- Update statistics in real-time with SIMPLIFIED logic
+task.spawn(function()
+    while task.wait(3) do
+        pcall(function()
+            -- Update server stats
+            local totalPlayers = #Players:GetPlayers()
+            local serverSize = game.PlaceId == 10449761463 and 20 or 15
+            local serverText = string.format("Players: %d/%d\nStatus: LIVE", totalPlayers, serverSize)
             
-            if not success then
-                warn("Stats update error:", err)
+            if serverStatsLabel and typeof(serverStatsLabel.SetDescription) == "function" then
+                serverStatsLabel:SetDescription(serverText)
             end
-        end
-    end)
+            
+            -- Update Discord stats (cached values)
+            local discordData = getDiscordStats()
+            local discordText = string.format("Members: %d+\nOnline: %d+", discordData.members, discordData.online)
+            
+            if discordStatsLabel and typeof(discordStatsLabel.SetDescription) == "function" then
+                discordStatsLabel:SetDescription(discordText)
+            end
+            
+            -- Update YouTube stats
+            if youtubeStatsLabel and typeof(youtubeStatsLabel.SetDescription) == "function" then
+                youtubeStatsLabel:SetDescription("Subscribers: 25,600")
+            end
+        end)
+    end
+end)
         
     -- Fixed Auto Toxic System
     local AutoToxic = {
