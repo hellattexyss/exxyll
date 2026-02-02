@@ -945,8 +945,8 @@ local function getDiscordStats()
     -- Since Roblox HTTP may be restricted, use fallback values
     -- You can manually update these occasionally
     return {
-        members = 32,100+,  -- Your approximate member count
-        online = 4000+     -- Your approximate online count
+        members = 32100,  -- Your approximate member count
+        online = 4000     -- Your approximate online count
     }
 end
 
