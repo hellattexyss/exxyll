@@ -798,7 +798,7 @@ function Camlock:SetupKeybind()
     
     local UtilityTab = Window:Tab({
         Title = "Utility",
-        Icon = "tool",
+        Icon = "pickaxe",
         Locked = false,
     })
     
