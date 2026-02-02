@@ -1491,7 +1491,7 @@ end
     
     local counterESPToggle = ESPTab:Toggle({
         Title = "Counter ESP",
-        Desc = "Highlights enemies when they use counter moves.",
+        Desc = "Highlights enemies when they use counter.",
         Value = ConfigManager:Get("CounterESPEnabled"),
         Callback = function(state)
             ConfigManager:Set("CounterESPEnabled", state)
@@ -1662,7 +1662,7 @@ end
     
     local pingESPToggle = ESPTab:Toggle({
         Title = "Ping Display ESP",
-        Desc = "Shows player ping above their heads\nGreen(<50ms) Yellow(<150ms) Red(>150ms)",
+        Desc = "Shows player ping above their heads.",
         Value = ConfigManager:Get("PingESPEnabled"),
         Callback = function(state)
             ConfigManager:Set("PingESPEnabled", state)
@@ -1999,7 +1999,7 @@ end
     
     local blockESPToggle = ESPTab:Toggle({
         Title = "Opponent Block ESP",
-        Desc = "Shows indicator when enemies use block animation",
+        Desc = "Shows indicator when enemies block.",
         Value = ConfigManager:Get("BlockESPEnabled"),
         Callback = function(state)
             ConfigManager:Set("BlockESPEnabled", state)
