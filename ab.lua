@@ -847,7 +847,35 @@ function Camlock:SetupKeybind()
             })
         end
     })
-
+    InfoTab:Button({
+    Title = "Refresh Stats",
+    Desc = "Manually refresh server and Discord statistics",
+    Callback = function()
+        -- Update server stats
+        local totalPlayers = #Players:GetPlayers()
+        local serverSize = game.PlaceId == 10449761463 and 20 or 15
+        local serverText = string.format("Players: %d/%d\nStatus: LIVE", totalPlayers, serverSize)
+        
+        if serverStatsLabel and typeof(serverStatsLabel.SetDescription) == "function" then
+            serverStatsLabel:SetDescription(serverText)
+        end
+        
+        -- Update Discord stats
+        local discordData = getDiscordStats()
+        local discordText = string.format("Members: %d+\nOnline: %d+", discordData.members, discordData.online)
+        
+        if discordStatsLabel and typeof(discordStatsLabel.SetDescription) == "function" then
+            discordStatsLabel:SetDescription(discordText)
+        end
+        
+        WindUI:Notify({
+            Title = "Stats Refreshed",
+            Content = "Server statistics updated",
+            Duration = 2,
+            Icon = "refresh-cw"
+        })
+    end
+})
     InfoTab:Section({
         Title = "Discord Community",
         Desc = "Our Discord server statistics"
