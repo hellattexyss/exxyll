@@ -626,6 +626,7 @@ function Camlock:Toggle()
 end
 
 -- COMPLETELY REWRITTEN MOBILE BUTTON
+-- REPLACE the entire CreateMobileButton function with this:
 function Camlock:CreateMobileButton()
     if self.MobileButton then return end
 
@@ -662,12 +663,19 @@ function Camlock:CreateMobileButton()
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = button
     
-    -- Store dragging state as local variables (NOT in self)
+    -- Simple and reliable dragging system
     local isDragging = false
     local dragStart, startPos
     
-    -- Input connections for dragging
-    local dragConnection1 = self.InputService.InputChanged:Connect(function(input)
+    button.MouseButton1Down:Connect(function()
+        isDragging = true
+        dragStart = self.InputService:GetMouseLocation()
+        startPos = container.Position
+        button.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    end)
+    
+    local inputChanged
+    inputChanged = self.InputService.InputChanged:Connect(function(input)
         if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local currentPos = self.InputService:GetMouseLocation()
             if currentPos and dragStart then
@@ -675,18 +683,14 @@ function Camlock:CreateMobileButton()
                 local newX = math.clamp(startPos.X.Offset + delta.X, 0, camera.ViewportSize.X - container.AbsoluteSize.X)
                 local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, camera.ViewportSize.Y - container.AbsoluteSize.Y)
                 
-                container.Position = UDim2.new(
-                    startPos.X.Scale, 
-                    newX,
-                    startPos.Y.Scale, 
-                    newY
-                )
+                container.Position = UDim2.new(0, newX, 0, newY)
             end
         end
     end)
     
-    local dragConnection2 = self.InputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and isDragging then
+    local inputEnded
+    inputEnded = self.InputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDragging = false
             if self.ButtonState == "ON" then
                 button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -696,66 +700,46 @@ function Camlock:CreateMobileButton()
         end
     end)
     
-    -- Mouse down event
-    button.MouseButton1Down:Connect(function()
-        isDragging = true
-        dragStart = self.InputService:GetMouseLocation()
-        startPos = container.Position
-        button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    end)
-    
-    -- Click event (only triggers when not dragging)
-    local clickCooldown = 0.3
-    local lastClickTime = 0
-    
+    -- Click handler (only if not dragging)
     button.MouseButton1Click:Connect(function()
+        -- Wait a tiny bit to check if this was a drag
+        task.wait(0.05)
+        if isDragging then return end
+        
         local currentTime = tick()
-        if currentTime - lastClickTime < clickCooldown then
+        if currentTime - self.LastClickTime < 0.5 then
             return
         end
-        
-        lastClickTime = currentTime
-        
-        -- Only toggle if we're not dragging
-        if isDragging then
-            isDragging = false
-            return
-        end
+        self.LastClickTime = currentTime
         
         -- Toggle camlock
-        if self.Enabled then
-            self:Stop()
-        else
-            self:Start()
-        end
+        self:Toggle()
     end)
     
-    -- Store connections
-    table.insert(self.Connections, dragConnection1)
-    table.insert(self.Connections, dragConnection2)
+    -- Store connections separately so they don't get cleaned up
+    self.MobileConnections = {
+        inputChanged = inputChanged,
+        inputEnded = inputEnded
+    }
     
     self.MobileButton = screenGui
     self.MobileButtonFrame = container
     screenGui.Parent = game:GetService("CoreGui")
 end
 
-function Camlock:UpdateMobileButtonText()
-    if self.MobileButtonFrame and self.MobileButtonFrame:FindFirstChild("CamlockButton") then
-        local button = self.MobileButtonFrame.CamlockButton
-        button.Text = "CAMLOCK " .. self.ButtonState
-        
-        if self.ButtonState == "ON" then
-            button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            button.BorderColor3 = Color3.fromRGB(255, 50, 50)
-        else
-            button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            button.BorderColor3 = Color3.fromRGB(255, 50, 50)
-        end
-    end
-end
-
+-- Also update RemoveMobileButton to clean up mobile connections:
 function Camlock:RemoveMobileButton()
     if self.MobileButton then
+        -- Clean up mobile-specific connections
+        if self.MobileConnections then
+            for _, conn in pairs(self.MobileConnections) do
+                if conn then
+                    pcall(function() conn:Disconnect() end)
+                end
+            end
+            self.MobileConnections = {}
+        end
+        
         self.MobileButton:Destroy()
         self.MobileButton = nil
         self.MobileButtonFrame = nil
@@ -1676,157 +1660,183 @@ end
     })
 
     -- Fixed High Ping Warning System
-    local HighPingWarning = {
-        Enabled = false,
-        Threshold = 150,
-        WarningFrame = nil,
-        Blinking = false,
-        Connection = nil
-    }
+    -- REPLACE the entire HighPingWarning system with this:
+local HighPingWarning = {
+    Enabled = false,
+    Threshold = 105,  -- Changed from 150 to 105
+    WarningFrame = nil,
+    Blinking = false,
+    Connection = nil,
+    LastPingCheck = 0,
+    PingCheckInterval = 1  -- Check every second
+}
+
+function HighPingWarning:CreateWarningFrame()
+    if self.WarningFrame then return end
     
-    function HighPingWarning:CreateWarningFrame()
-        if self.WarningFrame then return end
-        
-        local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "HighPingWarning"
-        screenGui.ResetOnSpawn = false
-        screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        
-        local frame = Instance.new("Frame")
-        frame.Name = "WarningFrame"
-        frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        frame.BackgroundTransparency = 0.6
-        frame.Size = UDim2.new(0, 300, 0, 80)
-        frame.Position = UDim2.new(0.5, -150, 0.8, 0)
-        frame.BorderSizePixel = 0
-        
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 8)
-        corner.Parent = frame
-        
-        local warningIcon = Instance.new("TextLabel")
-        warningIcon.Name = "WarningIcon"
-        warningIcon.Text = "!"
-        warningIcon.TextSize = 24
-        warningIcon.TextColor3 = Color3.fromRGB(255, 50, 50)
-        warningIcon.BackgroundTransparency = 1
-        warningIcon.Size = UDim2.new(0, 40, 0, 40)
-        warningIcon.Position = UDim2.new(0, 10, 0.5, -20)
-        warningIcon.Font = Enum.Font.GothamBold
-        warningIcon.Parent = frame
-        
-        local warningText = Instance.new("TextLabel")
-        warningText.Name = "WarningText"
-        warningText.Text = "PING TOO HIGH"
-        warningText.TextSize = 18
-        warningText.TextColor3 = Color3.fromRGB(255, 50, 50)
-        warningText.BackgroundTransparency = 1
-        warningText.Size = UDim2.new(1, -60, 0.5, 0)
-        warningText.Position = UDim2.new(0, 50, 0, 10)
-        warningText.Font = Enum.Font.GothamBold
-        warningText.TextXAlignment = Enum.TextXAlignment.Left
-        warningText.Parent = frame
-        
-        local subText = Instance.new("TextLabel")
-        subText.Name = "SubText"
-        subText.Text = "Autoblock may not work properly."
-        subText.TextSize = 14
-        subText.TextColor3 = Color3.fromRGB(180, 180, 180)
-        subText.BackgroundTransparency = 1
-        subText.Size = UDim2.new(1, -60, 0.5, 0)
-        subText.Position = UDim2.new(0, 50, 0.5, 0)
-        subText.Font = Enum.Font.Gotham
-        subText.TextXAlignment = Enum.TextXAlignment.Left
-        subText.Parent = frame
-        
-        screenGui.Parent = game:GetService("CoreGui")
-        self.WarningFrame = screenGui
-        self.WarningFrame.Enabled = false
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "HighPingWarning"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    local frame = Instance.new("Frame")
+    frame.Name = "WarningFrame"
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    frame.BackgroundTransparency = 0.3
+    frame.Size = UDim2.new(0, 300, 0, 80)
+    frame.Position = UDim2.new(0.5, -150, 0.8, 0)
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.fromRGB(255, 50, 50)
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+    
+    local warningIcon = Instance.new("TextLabel")
+    warningIcon.Name = "WarningIcon"
+    warningIcon.Text = "⚠"
+    warningIcon.TextSize = 24
+    warningIcon.TextColor3 = Color3.fromRGB(255, 100, 100)
+    warningIcon.BackgroundTransparency = 1
+    warningIcon.Size = UDim2.new(0, 40, 0, 40)
+    warningIcon.Position = UDim2.new(0, 10, 0.5, -20)
+    warningIcon.Font = Enum.Font.GothamBold
+    warningIcon.Parent = frame
+    
+    local warningText = Instance.new("TextLabel")
+    warningText.Name = "WarningText"
+    warningText.Text = "HIGH PING"
+    warningText.TextSize = 18
+    warningText.TextColor3 = Color3.fromRGB(255, 100, 100)
+    warningText.BackgroundTransparency = 1
+    warningText.Size = UDim2.new(1, -60, 0.5, 0)
+    warningText.Position = UDim2.new(0, 50, 0, 10)
+    warningText.Font = Enum.Font.GothamBold
+    warningText.TextXAlignment = Enum.TextXAlignment.Left
+    warningText.Parent = frame
+    
+    local subText = Instance.new("TextLabel")
+    subText.Name = "SubText"
+    subText.Text = "Ping is too high. Autoblock may not work."
+    subText.TextSize = 14
+    subText.TextColor3 = Color3.fromRGB(200, 200, 200)
+    subText.BackgroundTransparency = 1
+    subText.Size = UDim2.new(1, -60, 0.5, 0)
+    subText.Position = UDim2.new(0, 50, 0.5, 0)
+    subText.Font = Enum.Font.Gotham
+    subText.TextXAlignment = Enum.TextXAlignment.Left
+    subText.Parent = frame
+    
+    screenGui.Parent = game:GetService("CoreGui")
+    self.WarningFrame = screenGui
+    
+    -- Start hidden
+    frame.Visible = false
+end
+
+function HighPingWarning:CheckPing()
+    if not self.Enabled then return end
+    
+    local currentTime = tick()
+    if currentTime - self.LastPingCheck < self.PingCheckInterval then
+        return
     end
     
-    function HighPingWarning:CheckPing()
-        if not self.Enabled or not self.WarningFrame then return end
-        
-        local ping = LocalPlayer:GetAttribute("Ping") or 0
-        local pingValue = math.floor(ping)
-        
-        if pingValue >= self.Threshold then
-            if not self.Blinking then
-                self.Blinking = true
-                self.WarningFrame.Enabled = true
-                
-                if self.WarningFrame:FindFirstChild("WarningFrame") then
-                    local warningText = self.WarningFrame.WarningFrame:FindFirstChild("WarningText")
-                    if warningText then
-                        warningText.Text = "PING TOO HIGH (" .. pingValue .. "ms)"
-                    end
+    self.LastPingCheck = currentTime
+    
+    -- Get player ping
+    local success, ping = pcall(function()
+        return LocalPlayer:GetNetworkPing() * 1000  -- Convert to milliseconds
+    end)
+    
+    if not success then
+        ping = 0
+    end
+    
+    local pingValue = math.floor(ping)
+    
+    if pingValue >= self.Threshold then
+        if not self.Blinking then
+            self.Blinking = true
+            if self.WarningFrame and self.WarningFrame:FindFirstChild("WarningFrame") then
+                local frame = self.WarningFrame.WarningFrame
+                local warningText = frame:FindFirstChild("WarningText")
+                if warningText then
+                    warningText.Text = "HIGH PING (" .. pingValue .. "ms)"
                 end
-            end
-        else
-            if self.Blinking then
-                self.Blinking = false
-                self.WarningFrame.Enabled = false
+                frame.Visible = true
             end
         end
-    end
-    
-    function HighPingWarning:Start()
-        if self.Enabled then return end
-        
-        self.Enabled = true
-        self:CreateWarningFrame()
-        
-        if self.Connection then
-            self.Connection:Disconnect()
-        end
-        
-        self.Connection = RunService.Heartbeat:Connect(function()
-            self:CheckPing()
-        end)
-    end
-    
-    function HighPingWarning:Stop()
-        if not self.Enabled then return end
-        
-        self.Enabled = false
-        self.Blinking = false
-        
-        if self.Connection then
-            self.Connection:Disconnect()
-            self.Connection = nil
-        end
-        
-        if self.WarningFrame then
-            self.WarningFrame:Destroy()
-            self.WarningFrame = nil
+    else
+        if self.Blinking then
+            self.Blinking = false
+            if self.WarningFrame and self.WarningFrame:FindFirstChild("WarningFrame") then
+                self.WarningFrame.WarningFrame.Visible = false
+            end
         end
     end
+end
+
+function HighPingWarning:Start()
+    if self.Enabled then return end
     
-    local highPingToggle = ESPTab:Toggle({
+    self.Enabled = true
+    self:CreateWarningFrame()
+    
+    if self.Connection then
+        self.Connection:Disconnect()
+    end
+    
+    self.Connection = RunService.Heartbeat:Connect(function()
+        self:CheckPing()
+    end)
+    
+    WindUI:Notify({
         Title = "High Ping Warning",
-        Desc = "Shows warning when ping is too high (150+ ms)",
-        Value = ConfigManager:Get("HighPingWarningEnabled"),
-        Callback = function(state)
-            ConfigManager:Set("HighPingWarningEnabled", state)
-            if state then
-                HighPingWarning:Start()
-                WindUI:Notify({
-                    Title = "High Ping Warning",
-                    Content = "High ping warning enabled",
-                    Duration = 2,
-                    Icon = "alert-triangle"
-                })
-            else
-                HighPingWarning:Stop()
-                WindUI:Notify({
-                    Title = "High Ping Warning",
-                    Content = "High ping warning disabled",
-                    Duration = 2,
-                    Icon = "alert-triangle-off"
-                })
-            end
-        end
+        Content = "High ping warning enabled (105+ ms)",
+        Duration = 2,
+        Icon = "alert-triangle"
     })
+end
+
+function HighPingWarning:Stop()
+    if not self.Enabled then return end
+    
+    self.Enabled = false
+    self.Blinking = false
+    
+    if self.Connection then
+        self.Connection:Disconnect()
+        self.Connection = nil
+    end
+    
+    if self.WarningFrame then
+        self.WarningFrame:Destroy()
+        self.WarningFrame = nil
+    end
+    
+    WindUI:Notify({
+        Title = "High Ping Warning",
+        Content = "High ping warning disabled",
+        Duration = 2,
+        Icon = "alert-triangle-off"
+    })
+end
+
+-- Update the toggle in ESPTab to set threshold to 105
+local highPingToggle = ESPTab:Toggle({
+    Title = "High Ping Warning",
+    Desc = "Shows warning when ping is too high (105+ ms)",
+    Value = ConfigManager:Get("HighPingWarningEnabled"),
+    Callback = function(state)
+        ConfigManager:Set("HighPingWarningEnabled", state)
+        if state then
+            HighPingWarning:Start()
+        else
+            HighPingWarning:Stop()
+        end
+    end
+})
 
     -- Block ESP System
     local BlockESP = {
