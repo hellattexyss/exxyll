@@ -146,7 +146,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         Enabled = true,
         Draggable = true,
     })
-    Window:CreateTopbarButton("theme-switcher", "lucide:discord", function()
+    Window:CreateTopbarButton("theme-switcher", "geist:logo-discord", function()
     local link = "https://discord.gg/eS29VzFUrQ"
     -- try to copy to clipboard (requires executor that exposes setclipboard)
     if setclipboard then
@@ -163,7 +163,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     })
 end, 990)
 
-Window:CreateTopbarButton("theme-switcherr", "lucide:youtube", function()
+Window:CreateTopbarButton("theme-switcherr", "geist:logo-youtube", function()
     local link = "https://www.youtube.com/@waspire"
     -- try to copy to clipboard (requires executor that exposes setclipboard)
     if setclipboard then
