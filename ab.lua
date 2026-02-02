@@ -147,37 +147,6 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         Draggable = true,
     })
 
-    -- Discord (Geist – social logo)
-Window:CreateTopbarButton("discord", "geist:logo-discord", function()
-    local link = "https://discord.com/invite/J2PK69tFRM"
-    if setclipboard then
-        pcall(function()
-            setclipboard(link)
-        end)
-    end
-    WindUI:Notify({
-        Title = "Discord link copied!",
-        Content = "Join our Discord server",
-        Icon = "geist:logo-discord",
-        Duration = 3
-    })
-end, 990)
-
--- YouTube (Lucide – clean UI style)
-Window:CreateTopbarButton("youtube", "geist:logo-youtube", function()
-    local link = "https://www.youtube.com/@waspire"
-    if setclipboard then
-        pcall(function()
-            setclipboard(link)
-        end)
-    end
-    WindUI:Notify({
-        Title = "YouTube link copied!",
-        Content = "Subscribe to our channel",
-        Icon = "geist:logo-youtube",
-        Duration = 3
-    })
-end, 990)
 -- Snippet 2/5: AutoBlock Core Functions
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
