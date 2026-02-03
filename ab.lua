@@ -224,7 +224,9 @@ function AutoBlock:Start()
     
     self.Enabled = true
     self.Blocking = false
-    
+    self.JustBlocked = false  -- Add this line
+    self.M1Cooldown = false   -- Add this line
+        
     local heartbeatConn = RunService.Heartbeat:Connect(function()
         if not self.Enabled then return end
         
@@ -282,10 +284,20 @@ function AutoBlock:Start()
                 self.Blocking = false
                 self:ReleaseBlockKey()
                 
-                if ConfigManager:Get("M1AfterBlockEnabled") then
+                if ConfigManager:Get("M1AfterBlockEnabled") and not self.M1Cooldown then
+                    self.M1Cooldown = true
+                    self.JustBlocked = true
+                    
+                    -- M1 once
                     self:PressM1()
-                    task.wait(0.1)
+                    task.wait(0.05)  -- Shorter wait
                     self:ReleaseM1()
+                    
+                    -- Reset cooldown after a short delay
+                    task.delay(0.5, function()
+                        self.M1Cooldown = false
+                        self.JustBlocked = false
+                    end)
                 end
             end
         end
