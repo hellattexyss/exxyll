@@ -105,7 +105,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     local Window = WindUI:CreateWindow({
         Title = "Combat UI - Waspire",
         Icon = "rbxassetid://122251684068515?size=150x150",
-        IconSize = UDim2.fromOffset(32, 32),
+        IconSize = UDim2.fromOffset(50, 50),
         Author = "The Strongest Battlegrounds",
         Folder = "CombatGUI",
         Size = UDim2.fromOffset(620, 140),
