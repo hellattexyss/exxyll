@@ -2230,6 +2230,7 @@ local highPingToggle = ESPTab:Toggle({
             m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled)
             closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange)
             longRangeSlider:SetValue(defaultConfig.AutoBlockLongRange)
+            m1RangeSlider:SetValue(defaultConfig.M1AfterBlockRange)  -- ADD THIS LINE
             camlockToggle:SetValue(defaultConfig.CamlockEnabled)
             mobileCamlockToggle:SetValue(defaultConfig.MobileCamlockButton)
             counterESPToggle:SetValue(defaultConfig.CounterESPEnabled)
