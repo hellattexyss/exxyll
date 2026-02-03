@@ -621,31 +621,27 @@ function Camlock:Toggle()
     
     if self.Enabled then
         self:Stop()
+        self:UpdateMobileButtonText()
         return false
     else
-        return self:Start()
+        local result = self:Start()
+        self:UpdateMobileButtonText()
+        return result
     end
 end
 
--- COMPLETELY REWRITTEN MOBILE BUTTON
--- REPLACE the entire CreateMobileButton function with this:
 function Camlock:CreateMobileButton()
     if self.MobileButton then return end
 
     local camera = workspace.CurrentCamera
+    local viewportSize = camera.ViewportSize
     
+    -- Create the GUI
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "MobileCamlockButton"
     screenGui.ResetOnSpawn = false
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.IgnoreGuiInset = true
-    
-    local container = Instance.new("Frame")
-    container.Name = "CamlockContainer"
-    container.BackgroundTransparency = 1
-    container.Size = UDim2.new(0, 120, 0, 40)
-    container.Position = UDim2.new(1, -130, 0.5, -20)
-    container.Parent = screenGui
     
     local button = Instance.new("TextButton")
     button.Name = "CamlockButton"
@@ -653,79 +649,88 @@ function Camlock:CreateMobileButton()
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
     button.Font = Enum.Font.GothamBold
     button.TextSize = 14
-    button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    button.BackgroundColor3 = self.ButtonState == "ON" and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(0, 0, 0)
     button.BorderColor3 = Color3.fromRGB(255, 50, 50)
     button.BorderSizePixel = 2
     button.AutoButtonColor = false
-    button.Size = UDim2.new(1, 0, 1, 0)
-    button.Position = UDim2.new(0, 0, 0, 0)
-    button.Parent = container
+    button.Size = UDim2.new(0, 120, 0, 40)
+    button.Position = UDim2.new(1, -130, 0.5, -20)
+    button.Parent = screenGui
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = button
     
-    -- Simple and reliable dragging system
+    -- Dragging variables
     local isDragging = false
     local dragStart, startPos
+    local lastClickTime = 0
+    local clickCooldown = 0.3
     
-    button.MouseButton1Down:Connect(function()
-        isDragging = true
-        dragStart = self.InputService:GetMouseLocation()
-        startPos = container.Position
-        button.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    -- Mouse button down for dragging
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = true
+            dragStart = input.Position
+            startPos = button.Position
+            button.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        end
     end)
     
-    local inputChanged
-    inputChanged = self.InputService.InputChanged:Connect(function(input)
-        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local currentPos = self.InputService:GetMouseLocation()
-            if currentPos and dragStart then
+    -- Mouse movement for dragging
+    button.InputChanged:Connect(function(input)
+        if isDragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+            local currentPos = input.Position
+            if currentPos and dragStart and startPos then
                 local delta = currentPos - dragStart
-                local newX = math.clamp(startPos.X.Offset + delta.X, 0, camera.ViewportSize.X - container.AbsoluteSize.X)
-                local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, camera.ViewportSize.Y - container.AbsoluteSize.Y)
+                local newX = math.clamp(startPos.X.Offset + delta.X, 0, viewportSize.X - button.AbsoluteSize.X)
+                local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, viewportSize.Y - button.AbsoluteSize.Y)
                 
-                container.Position = UDim2.new(0, newX, 0, newY)
+                button.Position = UDim2.new(0, newX, 0, newY)
             end
         end
     end)
     
-    local inputEnded
-    inputEnded = self.InputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isDragging = false
-            if self.ButtonState == "ON" then
-                button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            else
-                button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    -- Mouse button up
+    button.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if isDragging then
+                isDragging = false
+                -- Restore original color
+                button.BackgroundColor3 = self.ButtonState == "ON" and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(0, 0, 0)
+                
+                -- Check if this was a click (minimal movement)
+                local currentTime = tick()
+                if currentTime - lastClickTime < clickCooldown then
+                    return
+                end
+                
+                if dragStart and input.Position then
+                    local distance = (dragStart - input.Position).Magnitude
+                    if distance < 5 then -- If moved less than 5 pixels, it's a click
+                        lastClickTime = currentTime
+                        self:Toggle()
+                    end
+                end
             end
         end
     end)
     
-    -- Click handler (only if not dragging)
+    -- Also handle click via MouseButton1Click for non-drag scenarios
     button.MouseButton1Click:Connect(function()
-        -- Wait a tiny bit to check if this was a drag
-        task.wait(0.05)
-        if isDragging then return end
-        
         local currentTime = tick()
-        if currentTime - self.LastClickTime < 0.5 then
+        if currentTime - lastClickTime < clickCooldown then
             return
         end
-        self.LastClickTime = currentTime
+        lastClickTime = currentTime
         
-        -- Toggle camlock
-        self:Toggle()
+        -- Only toggle if not currently dragging
+        if not isDragging then
+            self:Toggle()
+        end
     end)
     
-    -- Store connections separately so they don't get cleaned up
-    self.MobileConnections = {
-        inputChanged = inputChanged,
-        inputEnded = inputEnded
-    }
-    
     self.MobileButton = screenGui
-    self.MobileButtonFrame = container
     screenGui.Parent = game:GetService("CoreGui")
 end
 
