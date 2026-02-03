@@ -9,6 +9,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         AutoBlockEnabled = false,
         AutoBlockCloseRange = 14,
         AutoBlockLongRange = 35,
+        M1AfterBlockRange = 10,  -- ADD THIS LINE
         CounterESPEnabled = false,
         CounterRange = 20,
         M1AfterBlockEnabled = false,
@@ -231,7 +232,8 @@ function AutoBlock:Start()
         local longRange = ConfigManager:Get("AutoBlockLongRange")
         local closeMoves = ConfigManager:Get("CloseRangeMoves")
         local longMoves = ConfigManager:Get("LongRangeMoves")
-        
+        local m1Range = ConfigManager:Get("M1AfterBlockRange")  -- ADD THIS
+                
         local character = LocalPlayer.Character
         if not character or not character:FindFirstChild("HumanoidRootPart") then return end
         
@@ -281,7 +283,7 @@ function AutoBlock:Start()
                 self.Blocking = false
                 self:ReleaseBlockKey()
                 
-                if ConfigManager:Get("M1AfterBlockEnabled") then
+                if ConfigManager:Get("M1AfterBlockEnabled") and closestCloseDistance <= m1Range then
                     self:PressM1()
                     task.wait(0.1)
                     self:ReleaseM1()
@@ -1263,7 +1265,24 @@ end
             end
         end
     })
-    
+    local m1RangeSlider = CombatTab:Slider({
+    Title = "M1 After Block Range",
+    Desc = "Maximum distance to M1 after blocking (studs)",
+    Value = {
+        Min = 5,
+        Max = 30,
+        Default = ConfigManager:Get("M1AfterBlockRange"),
+    },
+    Callback = function(value)
+        ConfigManager:Set("M1AfterBlockRange", tonumber(value))
+        WindUI:Notify({
+            Title = "Settings Updated",
+            Content = "M1 After Block range set to " .. value .. " studs",
+            Duration = 2,
+            Icon = "settings"
+        })
+    end
+})
     -- Camlock Tab Elements
     CamlockTab:Section({
         Title = "Camlock System",
