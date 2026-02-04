@@ -432,8 +432,6 @@ function Camlock:CreateMobileButton()
         return 
     end
 
-    local camera = workspace.CurrentCamera
-    
     -- Create the GUI
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "MobileCamlockButton"
@@ -461,83 +459,44 @@ function Camlock:CreateMobileButton()
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = button
     
-    -- Dragging variables
-    local isDragging = false
-    local dragStart, startPos
-    local lastClickTime = 0
-    local clickCooldown = 0.5
-    
-    -- Mouse button down for dragging
-    button.MouseButton1Down:Connect(function()
-        isDragging = true
-        dragStart = game:GetService("UserInputService"):GetMouseLocation()
-        startPos = button.Position
-        button.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    -- Simple click handler (toggle camlock when clicked)
+    button.MouseButton1Click:Connect(function()
+        self:Toggle()
+        -- Also update the PC toggle in WindUI if it exists
+        if camlockToggle and typeof(camlockToggle.SetValue) == "function" then
+            camlockToggle:SetValue(self.Enabled)
+        end
     end)
     
-    -- Mouse movement for dragging
-    local mouseMoveConnection
-    mouseMoveConnection = game:GetService("UserInputService").InputChanged:Connect(function(input)
-        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local currentPos = game:GetService("UserInputService"):GetMouseLocation()
-            if currentPos and dragStart and startPos then
-                local delta = currentPos - dragStart
-                local viewportSize = camera.ViewportSize
-                local buttonSize = button.AbsoluteSize
-                
-                -- Calculate new position
-                local newX = startPos.X.Offset + delta.X
-                local newY = startPos.Y.Offset + delta.Y
-                
-                -- Clamp to screen boundaries
-                newX = math.clamp(newX, 0, viewportSize.X - buttonSize.X)
-                newY = math.clamp(newY, 0, viewportSize.Y - buttonSize.Y)
-                
-                button.Position = UDim2.new(0, newX, 0, newY)
+    -- Dragging functionality (simplified)
+    local isDragging = false
+    local dragStart
+    
+    button.MouseButton1Down:Connect(function()
+        isDragging = false
+        dragStart = button.Position
+    end)
+    
+    local inputService = game:GetService("UserInputService")
+    
+    inputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and inputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+            if button:IsMouseOver() then
+                isDragging = true
+                local mousePos = inputService:GetMouseLocation()
+                button.Position = UDim2.new(0, mousePos.X - 60, 0, mousePos.Y - 20)
             end
         end
     end)
     
-    -- Mouse button up
-    local mouseUpConnection
-    mouseUpConnection = game:GetService("UserInputService").InputEnded:Connect(function(input)
+    inputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             if isDragging then
                 isDragging = false
-                -- Restore original color based on state
-                button.BackgroundColor3 = self.ButtonState == "ON" and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(0, 0, 0)
-                
-                -- Check if this was a click (small movement)
-                if dragStart and game:GetService("UserInputService"):GetMouseLocation() then
-                    local endPos = game:GetService("UserInputService"):GetMouseLocation()
-                    local distance = (dragStart - endPos).Magnitude
-                    
-                    if distance < 10 then -- Small movement = click
-                        local currentTime = tick()
-                        if currentTime - lastClickTime >= clickCooldown then
-                            lastClickTime = currentTime
-                            self:Toggle()
-                        end
-                    end
-                end
+                -- Button already moved, no action needed
             end
         end
     end)
-    
-    -- Also handle direct clicks (for when dragging detection fails)
-    button.MouseButton1Click:Connect(function()
-        local currentTime = tick()
-        if currentTime - lastClickTime >= clickCooldown and not isDragging then
-            lastClickTime = currentTime
-            self:Toggle()
-        end
-    end)
-    
-    -- Store connections
-    self.MobileConnections = {
-        mouseMove = mouseMoveConnection,
-        mouseUp = mouseUpConnection
-    }
     
     self.MobileButton = screenGui
     screenGui.Parent = game:GetService("CoreGui")
@@ -545,7 +504,6 @@ function Camlock:CreateMobileButton()
     -- Update text immediately
     self:UpdateMobileButtonText()
 end
-
 -- Also update RemoveMobileButton to clean up mobile connections:
 function Camlock:RemoveMobileButton()
     if self.MobileButton then
@@ -663,7 +621,17 @@ function Camlock:Start()
         local character = self.Target.Character
         if character and character:FindFirstChild("HumanoidRootPart") then
             local camera = workspace.CurrentCamera
-            camera.CFrame = CFrame.new(camera.CFrame.Position, character.HumanoidRootPart.Position)
+            local targetPosition = character.HumanoidRootPart.Position
+            
+            -- VERY LOW smoothness (almost instant) - 0.05 is very low, you can go even lower like 0.01
+            local smoothness = 0.05 -- CHANGE THIS VALUE: lower = less smooth, higher = more smooth
+            
+            -- Calculate smoothed camera position
+            local currentCFrame = camera.CFrame
+            local targetCFrame = CFrame.new(currentCFrame.Position, targetPosition)
+            local smoothedCFrame = currentCFrame:Lerp(targetCFrame, smoothness)
+            
+            camera.CFrame = smoothedCFrame
         end
     end)
     
@@ -679,7 +647,7 @@ function Camlock:Start()
     self:UpdateMobileButtonText()
     return true
 end
-
+    
 function Camlock:Stop()
     if not self.Enabled then return end
     
@@ -1245,23 +1213,28 @@ end
     })
     
     local camlockToggle = CamlockTab:Toggle({
-        Title = "Camlock (PC)",
-        Desc = "Enable camera lock to nearest enemy for PC users",
-        Value = ConfigManager:Get("CamlockEnabled"),
-        Callback = function(state)
-            ConfigManager:Set("CamlockEnabled", state)
-            
-            if state then
-                local success = Camlock:Start()
-                if not success then
-                    ConfigManager:Set("CamlockEnabled", false)
-                    camlockToggle:SetValue(false)
-                end
-            else
-                Camlock:Stop()
+    Title = "Camlock (PC)",
+    Desc = "Enable camera lock to nearest enemy for PC users",
+    Value = ConfigManager:Get("CamlockEnabled"),
+    Callback = function(state)
+        ConfigManager:Set("CamlockEnabled", state)
+        
+        if state then
+            local success = Camlock:Start()
+            if not success then
+                ConfigManager:Set("CamlockEnabled", false)
+                camlockToggle:SetValue(false)
             end
+        else
+            Camlock:Stop()
         end
-    })
+        
+        -- Update mobile button if it exists
+        if Camlock.MobileButton then
+            Camlock:UpdateMobileButtonText()
+        end
+    end
+})
     
     local keybindButton = CamlockTab:Button({
         Title = "Change Keybind (Currently: " .. ConfigManager:Get("CamlockKeybind") .. ")",
@@ -1292,30 +1265,30 @@ end
     })
     
             local mobileCamlockToggle = CamlockTab:Toggle({
-        Title = "Mobile Camlock Button",
-        Desc = "Show mobile button for camlock control (Mobile users)",
-        Value = ConfigManager:Get("MobileCamlockButton"),
-        Callback = function(state)
-            ConfigManager:Set("MobileCamlockButton", state)
-            if state then
-                Camlock:CreateMobileButton()
-                WindUI:Notify({
-                    Title = "Mobile Button",
-                    Content = "Mobile camlock button added to screen",
-                    Duration = 2,
-                    Icon = "smartphone"
-                })
-            else
-                Camlock:RemoveMobileButton()
-                WindUI:Notify({
-                    Title = "Mobile Button",
-                    Content = "Mobile camlock button removed",
-                    Duration = 2,
-                    Icon = "smartphone-off"
-                })
-            end
+    Title = "Mobile Camlock Button",
+    Desc = "Show mobile button for camlock control (Mobile users)",
+    Value = ConfigManager:Get("MobileCamlockButton"),
+    Callback = function(state)
+        ConfigManager:Set("MobileCamlockButton", state)
+        if state then
+            Camlock:CreateMobileButton()
+            WindUI:Notify({
+                Title = "Mobile Button",
+                Content = "Mobile camlock button added to screen\nDrag to move, click to toggle camlock",
+                Duration = 3,
+                Icon = "smartphone"
+            })
+        else
+            Camlock:RemoveMobileButton()
+            WindUI:Notify({
+                Title = "Mobile Button",
+                Content = "Mobile camlock button removed",
+                Duration = 2,
+                Icon = "smartphone-off"
+            })
         end
-    })
+    end
+})
 -- Snippet 5/5: ESP Systems and Final Initialization
     -- ESP Tab Elements
     ESPTab:Section({
