@@ -650,13 +650,6 @@ function Camlock:Start()
     
     table.insert(self.Connections, renderStepConn)
     
-    WindUI:Notify({
-        Title = "Camlock",
-        Content = "Camlock enabled on " .. self.Target.Name,
-        Duration = 2,
-        Icon = "crosshair"
-    })
-    
     self:UpdateMobileButtonText()
     return true
 end
