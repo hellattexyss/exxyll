@@ -1530,8 +1530,6 @@ local smoothnessSlider = CamlockTab:Slider({
     end
 })
 
--- Initialize smoothness
-Camlock.Smoothness = 0.01
 -- Snippet 5/5: ESP Systems and Final Initialization
     -- ESP Tab Elements
     ESPTab:Section({
