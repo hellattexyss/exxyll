@@ -620,7 +620,80 @@ end
     self:UpdateMobileButtonText()
     return true
 end
+
+function Camlock:Start()
+    if self.Enabled then return false end
     
+    if self:CheckLocalPlayerDeath() then
+        WindUI:Notify({
+            Title = "Camlock Error",
+            Content = "Cannot enable camlock while dead or respawning",
+            Duration = 2,
+            Icon = "alert-triangle"
+        })
+        return false
+    end
+    
+    self.Target = self:FindClosestTarget()
+    if not self.Target then
+        WindUI:Notify({
+            Title = "Camlock Error",
+            Content = "No valid target found",
+            Duration = 2,
+            Icon = "alert-triangle"
+        })
+        return false
+    end
+    
+    self.Enabled = true
+    self:AddTargetHighlight()
+    
+    local renderStepConn = RunService.RenderStepped:Connect(function()
+        if not self.Enabled or not self.Target or self:CheckLocalPlayerDeath() then
+            self:Stop()
+            return
+        end
+        
+        if not self:ValidateTarget() then
+            self.Target = self:FindClosestTarget()
+            if not self.Target then
+                self:Stop()
+                return
+            end
+            self:RemoveTargetHighlight()
+            self:AddTargetHighlight()
+        end
+        
+        local character = self.Target.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            local camera = workspace.CurrentCamera
+            local targetPosition = character.HumanoidRootPart.Position
+            
+            -- Use the smoothness variable
+            local smoothness = self.Smoothness or 0.05
+            
+            -- Calculate smoothed camera position
+            local currentCFrame = camera.CFrame
+            local targetCFrame = CFrame.new(currentCFrame.Position, targetPosition)
+            local smoothedCFrame = currentCFrame:Lerp(targetCFrame, smoothness)
+            
+            camera.CFrame = smoothedCFrame
+        end
+    end)
+    
+    table.insert(self.Connections, renderStepConn)
+    
+    WindUI:Notify({
+        Title = "Camlock",
+        Content = "Camlock enabled on " .. self.Target.Name,
+        Duration = 2,
+        Icon = "crosshair"
+    })
+    
+    self:UpdateMobileButtonText()
+    return true
+end
+
 function Camlock:Stop()
     if not self.Enabled then return end
     
@@ -2037,7 +2110,7 @@ local highPingToggle = ESPTab:Toggle({
     
     self.Indicators[character] = billboard
     return billboard
-endend
+end
     
     function BlockESP:RemoveBlockIndicator(character)
         if self.Indicators[character] then
@@ -2113,43 +2186,6 @@ endend
         end
     end
 end
-            
-            for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-                if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
-                    self:CreateBlockIndicator(character)
-                end
-            end
-        end)
-        
-        table.insert(self.Connections, charAddedConn)
-        
-        if player.Character then
-            local humanoid = player.Character:FindFirstChild("Humanoid")
-            if humanoid then
-                local animationConn = humanoid.AnimationPlayed:Connect(function(track)
-                    if not self.Enabled then return end
-                    
-                    if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
-                        local billboard = self:CreateBlockIndicator(player.Character)
-                        
-                        if billboard then
-                            track.Stopped:Connect(function()
-                                self:RemoveBlockIndicator(player.Character)
-                            end)
-                        end
-                    end
-                end)
-                
-                table.insert(self.Connections, animationConn)
-                
-                for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-                    if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
-                        self:CreateBlockIndicator(player.Character)
-                    end
-                end
-            end
-        end
-    end
     
     function BlockESP:Start()
         if self.Enabled then return end
