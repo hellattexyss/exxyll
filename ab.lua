@@ -339,7 +339,7 @@ local Camlock = {
      -- ... existing properties ...
     IsDragging = false,
     DragStart = nil,
-    StartPosition = nil
+    StartPosition = nil,
     Smoothness = 0.05  -- ADD THIS LINE HERE
 }
 
