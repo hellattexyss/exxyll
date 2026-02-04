@@ -819,7 +819,6 @@ function TargetInfo:Stop()
         end
     end
 end
-end
 -- Snippet 4/5: UI Setup and Systems
 -- Snippet 4/5: UI Setup and Systems
     local InfoTab = Window:Tab({
