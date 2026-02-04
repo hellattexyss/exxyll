@@ -587,7 +587,120 @@ function Camlock:SetupKeybind()
             self:Toggle()
         end
     end)
+end
+
+function Camlock:Toggle()
+    local currentTime = tick()
+    if currentTime - self.LastToggleTime < self.ToggleCooldown then
+        return
     end
+    
+    self.LastToggleTime = currentTime
+    
+    if self.Enabled then
+        self:Stop()
+    else
+        self:Start()
+    end
+    
+    self:UpdateMobileButtonText()
+    
+    return self.Enabled
+end
+
+function Camlock:UpdateMobileButtonText()
+    if self.MobileButton and self.MobileButton:FindFirstChild("CamlockButton") then
+        local button = self.MobileButton.CamlockButton
+        self.ButtonState = self.Enabled and "ON" or "OFF"
+        button.Text = "CAMLOCK " .. self.ButtonState
+        button.BackgroundColor3 = self.Enabled and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(0, 0, 0)
+    end
+end
+
+function Camlock:Start()
+    if self.Enabled then return false end
+    
+    if self:CheckLocalPlayerDeath() then
+        WindUI:Notify({
+            Title = "Camlock Error",
+            Content = "Cannot enable camlock while dead or respawning",
+            Duration = 2,
+            Icon = "alert-triangle"
+        })
+        return false
+    end
+    
+    self.Target = self:FindClosestTarget()
+    if not self.Target then
+        WindUI:Notify({
+            Title = "Camlock Error",
+            Content = "No valid target found",
+            Duration = 2,
+            Icon = "alert-triangle"
+        })
+        return false
+    end
+    
+    self.Enabled = true
+    self:AddTargetHighlight()
+    
+    local renderStepConn = RunService.RenderStepped:Connect(function()
+        if not self.Enabled or not self.Target or self:CheckLocalPlayerDeath() then
+            self:Stop()
+            return
+        end
+        
+        if not self:ValidateTarget() then
+            self.Target = self:FindClosestTarget()
+            if not self.Target then
+                self:Stop()
+                return
+            end
+            self:RemoveTargetHighlight()
+            self:AddTargetHighlight()
+        end
+        
+        local character = self.Target.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            local camera = workspace.CurrentCamera
+            camera.CFrame = CFrame.new(camera.CFrame.Position, character.HumanoidRootPart.Position)
+        end
+    end)
+    
+    table.insert(self.Connections, renderStepConn)
+    
+    WindUI:Notify({
+        Title = "Camlock",
+        Content = "Camlock enabled on " .. self.Target.Name,
+        Duration = 2,
+        Icon = "crosshair"
+    })
+    
+    self:UpdateMobileButtonText()
+    return true
+end
+
+function Camlock:Stop()
+    if not self.Enabled then return end
+    
+    self.Enabled = false
+    self.Target = nil
+    self:RemoveTargetHighlight()
+    
+    for _, conn in ipairs(self.Connections) do
+        conn:Disconnect()
+    end
+    self.Connections = {}
+    
+    WindUI:Notify({
+        Title = "Camlock",
+        Content = "Camlock disabled",
+        Duration = 2,
+        Icon = "crosshair-off"
+    })
+    
+    self:UpdateMobileButtonText()
+end
 -- Snippet 4/5: UI Setup and Systems
     local InfoTab = Window:Tab({
         Title = "Info",
@@ -746,18 +859,19 @@ function Camlock:SetupKeybind()
 
     -- Replace the entire fetchDiscordStats function and update loop with this:
 
+-- Simple function to get Discord stats (no HTTP calls)
+-- Simple function to get Discord stats (no HTTP calls)
 local function getDiscordStats()
-    -- Since Roblox HTTP may be restricted, use fallback values
-    -- You can manually update these occasionally
+    -- Return static values since HTTP may be blocked
     return {
-        members = 32100,  -- Your approximate member count
-        online = 4000     -- Your approximate online count
+        members = 32100,
+        online = 4000
     }
 end
 
--- Update statistics in real-time with SIMPLIFIED logic
+-- Update statistics in real-time - SIMPLIFIED
 task.spawn(function()
-    while task.wait(3) do
+    while true do
         pcall(function()
             -- Update server stats
             local totalPlayers = #Players:GetPlayers()
@@ -781,7 +895,35 @@ task.spawn(function()
                 youtubeStatsLabel:SetDescription("Subscribers: 25,600")
             end
         end)
+        task.wait(5) -- Check every 5 seconds
     end
+end)
+
+-- Initialize immediately
+task.spawn(function()
+    task.wait(2) -- Wait for UI to load
+    pcall(function()
+        local totalPlayers = #Players:GetPlayers()
+        local serverSize = game.PlaceId == 10449761463 and 20 or 15
+        local serverText = string.format("Players: %d/%d\nStatus: LIVE", totalPlayers, serverSize)
+        
+        if serverStatsLabel and typeof(serverStatsLabel.SetDescription) == "function" then
+            serverStatsLabel:SetDescription(serverText)
+        end
+        
+        -- Initialize Discord stats
+        local discordData = getDiscordStats()
+        local discordText = string.format("Members: %d+\nOnline: %d+", discordData.members, discordData.online)
+        
+        if discordStatsLabel and typeof(discordStatsLabel.SetDescription) == "function" then
+            discordStatsLabel:SetDescription(discordText)
+        end
+        
+        -- Initialize YouTube stats
+        if youtubeStatsLabel and typeof(youtubeStatsLabel.SetDescription) == "function" then
+            youtubeStatsLabel:SetDescription("Subscribers: 25,600")
+        end
+    end)
 end)
         
     -- Fixed Auto Toxic System
@@ -2172,64 +2314,76 @@ local highPingToggle = ESPTab:Toggle({
     end)
     
     -- Initialize based on saved state
-    task.spawn(function()
-        task.wait(2)
-        
-        if ConfigManager:Get("AutoBlockEnabled") then
-            AutoBlock:Start()
-            WindUI:Notify({
-                Title = "Auto Block",
-                Content = "Auto Block system initialized from saved settings",
-                Duration = 3,
-                Icon = "check"
-            })
-        end
-        
-        if ConfigManager:Get("CamlockEnabled") then
-            local success = Camlock:Start()
-            if not success then
-                ConfigManager:Set("CamlockEnabled", false)
-                if camlockToggle then
-                    camlockToggle:SetValue(false)
-                end
+    -- Initialize all features based on saved state
+task.spawn(function()
+    task.wait(2) -- Wait for UI to fully load
+    
+    WindUI:Notify({
+        Title = "Combat UI",
+        Content = "Initializing features...",
+        Duration = 2,
+        Icon = "loader"
+    })
+    
+    -- AutoBlock
+    if ConfigManager:Get("AutoBlockEnabled") then
+        AutoBlock:Start()
+    end
+    
+    -- Camlock
+    if ConfigManager:Get("CamlockEnabled") then
+        local success = Camlock:Start()
+        if not success then
+            ConfigManager:Set("CamlockEnabled", false)
+            if camlockToggle then
+                camlockToggle:SetValue(false)
             end
         end
-        
-        if ConfigManager:Get("MobileCamlockButton") then
-            Camlock:CreateMobileButton()
-        end
-     
-        if ConfigManager:Get("MobileCamlockButton") then
-            -- Create mobile button after a short delay
-            task.wait(0.3)
-            Camlock:CreateMobileButton()
-            -- Force update the text
-            Camlock:UpdateMobileButtonText()
-        end
-        if ConfigManager:Get("CounterESPEnabled") then
-            CounterESP:Start()
-        end
-        
-        if ConfigManager:Get("PingESPEnabled") then
-            PingESP:Start()
-        end
-        
-        if ConfigManager:Get("BlockESPEnabled") then
-            BlockESP:Start()
-        end
-        
-        if ConfigManager:Get("HighPingWarningEnabled") then
-            HighPingWarning:Start()
-        end
-        
-        if ConfigManager:Get("DeathCounterESPEnabled") then
-            DeathCounterESP:Start()
-        end
-        
-        if ConfigManager:Get("AutoToxicEnabled") then
-            AutoToxic:Start()
-        end
-    end)
+    end
+    
+    -- Mobile Camlock Button
+    if ConfigManager:Get("MobileCamlockButton") then
+        task.wait(0.5) -- Extra delay for mobile button
+        Camlock:CreateMobileButton()
+    end
+    
+    -- Counter ESP
+    if ConfigManager:Get("CounterESPEnabled") then
+        CounterESP:Start()
+    end
+    
+    -- Ping ESP
+    if ConfigManager:Get("PingESPEnabled") then
+        PingESP:Start()
+    end
+    
+    -- Block ESP
+    if ConfigManager:Get("BlockESPEnabled") then
+        BlockESP:Start()
+    end
+    
+    -- High Ping Warning
+    if ConfigManager:Get("HighPingWarningEnabled") then
+        HighPingWarning:Start()
+    end
+    
+    -- Death Counter ESP
+    if ConfigManager:Get("DeathCounterESPEnabled") then
+        DeathCounterESP:Start()
+    end
+    
+    -- Auto Toxic
+    if ConfigManager:Get("AutoToxicEnabled") then
+        AutoToxic:Start()
+    end
+    
+    WindUI:Notify({
+        Title = "Combat UI v1.0",
+        Content = "All features initialized!",
+        Duration = 3,
+        Icon = "check"
+    })
+end)
     
     task.wait(1)
     game:GetService("StarterGui"):SetCore("SendNotification", {
