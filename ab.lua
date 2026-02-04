@@ -666,13 +666,6 @@ function Camlock:Stop()
     end
     self.Connections = {}
     
-    WindUI:Notify({
-        Title = "Camlock",
-        Content = "Camlock disabled",
-        Duration = 2,
-        Icon = "crosshair-off"
-    })
-    
     self:UpdateMobileButtonText()
 end
 -- Target Info Display System
