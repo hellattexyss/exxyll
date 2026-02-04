@@ -592,35 +592,6 @@ function Camlock:UpdateMobileButtonText()
     end
 end
 
-local character = self.Target.Character
-if character and character:FindFirstChild("HumanoidRootPart") then
-    local camera = workspace.CurrentCamera
-    local targetPosition = character.HumanoidRootPart.Position
-    
-    -- Use the smoothness variable
-    local smoothness = self.Smoothness or 0.05
-    
-    -- Calculate smoothed camera position
-    local currentCFrame = camera.CFrame
-    local targetCFrame = CFrame.new(currentCFrame.Position, targetPosition)
-    local smoothedCFrame = currentCFrame:Lerp(targetCFrame, smoothness)
-    
-    camera.CFrame = smoothedCFrame
-end
-    
-    table.insert(self.Connections, renderStepConn)
-    
-    WindUI:Notify({
-        Title = "Camlock",
-        Content = "Camlock enabled on " .. self.Target.Name,
-        Duration = 2,
-        Icon = "crosshair"
-    })
-    
-    self:UpdateMobileButtonText()
-    return true
-end
-
 function Camlock:Start()
     if self.Enabled then return false end
     
