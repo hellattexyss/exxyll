@@ -340,6 +340,7 @@ local Camlock = {
     IsDragging = false,
     DragStart = nil,
     StartPosition = nil
+    Smoothness = 0.05  -- ADD THIS LINE HERE
 }
 
 function Camlock:FindClosestTarget()
@@ -468,35 +469,51 @@ function Camlock:CreateMobileButton()
         end
     end)
     
-    -- Dragging functionality (simplified)
-    local isDragging = false
-    local dragStart
+    -- SIMPLIFIED DRAGGING - Works for both mouse and touch
+    local dragging = false
+    local dragInput, dragStart, startPos
     
-    button.MouseButton1Down:Connect(function()
-        isDragging = false
-        dragStart = button.Position
-    end)
+    local function updateInput(input)
+        local delta = input.Position - dragStart
+        local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, 
+                                  startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        button.Position = newPos
+    end
     
-    local inputService = game:GetService("UserInputService")
-    
-    inputService.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement and inputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-            if button:IsMouseOver() then
-                isDragging = true
-                local mousePos = inputService:GetMouseLocation()
-                button.Position = UDim2.new(0, mousePos.X - 60, 0, mousePos.Y - 20)
-            end
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = button.Position
+            
+            -- Capture input for smooth dragging
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
         end
     end)
     
-    inputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            if isDragging then
-                isDragging = false
-                -- Button already moved, no action needed
-            end
+    button.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
         end
     end)
+    
+    -- Smooth dragging during render step
+    local dragConnection
+    dragConnection = RunService.RenderStepped:Connect(function()
+        if dragging and dragInput then
+            updateInput(dragInput)
+        end
+    end)
+    
+    -- Store connection for cleanup
+    if not self.MobileConnections then
+        self.MobileConnections = {}
+    end
+    table.insert(self.MobileConnections, dragConnection)
     
     self.MobileButton = screenGui
     screenGui.Parent = game:GetService("CoreGui")
@@ -575,65 +592,21 @@ function Camlock:UpdateMobileButtonText()
     end
 end
 
-function Camlock:Start()
-    if self.Enabled then return false end
+local character = self.Target.Character
+if character and character:FindFirstChild("HumanoidRootPart") then
+    local camera = workspace.CurrentCamera
+    local targetPosition = character.HumanoidRootPart.Position
     
-    if self:CheckLocalPlayerDeath() then
-        WindUI:Notify({
-            Title = "Camlock Error",
-            Content = "Cannot enable camlock while dead or respawning",
-            Duration = 2,
-            Icon = "alert-triangle"
-        })
-        return false
-    end
+    -- Use the smoothness variable
+    local smoothness = self.Smoothness or 0.05
     
-    self.Target = self:FindClosestTarget()
-    if not self.Target then
-        WindUI:Notify({
-            Title = "Camlock Error",
-            Content = "No valid target found",
-            Duration = 2,
-            Icon = "alert-triangle"
-        })
-        return false
-    end
+    -- Calculate smoothed camera position
+    local currentCFrame = camera.CFrame
+    local targetCFrame = CFrame.new(currentCFrame.Position, targetPosition)
+    local smoothedCFrame = currentCFrame:Lerp(targetCFrame, smoothness)
     
-    self.Enabled = true
-    self:AddTargetHighlight()
-    
-    local renderStepConn = RunService.RenderStepped:Connect(function()
-        if not self.Enabled or not self.Target or self:CheckLocalPlayerDeath() then
-            self:Stop()
-            return
-        end
-        
-        if not self:ValidateTarget() then
-            self.Target = self:FindClosestTarget()
-            if not self.Target then
-                self:Stop()
-                return
-            end
-            self:RemoveTargetHighlight()
-            self:AddTargetHighlight()
-        end
-        
-        local character = self.Target.Character
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            local camera = workspace.CurrentCamera
-            local targetPosition = character.HumanoidRootPart.Position
-            
-            -- VERY LOW smoothness (almost instant) - 0.05 is very low, you can go even lower like 0.01
-            local smoothness = 0.05 -- CHANGE THIS VALUE: lower = less smooth, higher = more smooth
-            
-            -- Calculate smoothed camera position
-            local currentCFrame = camera.CFrame
-            local targetCFrame = CFrame.new(currentCFrame.Position, targetPosition)
-            local smoothedCFrame = currentCFrame:Lerp(targetCFrame, smoothness)
-            
-            camera.CFrame = smoothedCFrame
-        end
-    end)
+    camera.CFrame = smoothedCFrame
+end
     
     table.insert(self.Connections, renderStepConn)
     
@@ -669,6 +642,185 @@ function Camlock:Stop()
     
     self:UpdateMobileButtonText()
 end
+-- Target Info Display System
+local TargetInfo = {
+    Enabled = false,
+    InfoFrame = nil,
+    Connection = nil
+}
+
+function TargetInfo:CreateInfoFrame()
+    if self.InfoFrame then return end
+    
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "CamlockTargetInfo"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    local frame = Instance.new("Frame")
+    frame.Name = "TargetInfoFrame"
+    frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    frame.BackgroundTransparency = 0.2
+    frame.Size = UDim2.new(0, 250, 0, 100)
+    frame.Position = UDim2.new(0.5, -125, 0, 10)
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.fromRGB(255, 50, 50)
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+    
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Text = "LOCKED TARGET"
+    title.TextColor3 = Color3.fromRGB(255, 100, 100)
+    title.TextSize = 16
+    title.Font = Enum.Font.GothamBold
+    title.BackgroundTransparency = 1
+    title.Size = UDim2.new(1, 0, 0, 25)
+    title.Position = UDim2.new(0, 0, 0, 5)
+    title.Parent = frame
+    
+    -- Player Name
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "PlayerName"
+    nameLabel.Text = "Player: None"
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextSize = 14
+    nameLabel.Font = Enum.Font.Gotham
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Size = UDim2.new(1, -10, 0, 20)
+    nameLabel.Position = UDim2.new(0, 10, 0, 30)
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = frame
+    
+    -- Health
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Name = "Health"
+    healthLabel.Text = "Health: 100/100"
+    healthLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    healthLabel.TextSize = 14
+    healthLabel.Font = Enum.Font.Gotham
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.Size = UDim2.new(1, -10, 0, 20)
+    healthLabel.Position = UDim2.new(0, 10, 0, 50)
+    healthLabel.TextXAlignment = Enum.TextXAlignment.Left
+    healthLabel.Parent = frame
+    
+    -- Distance
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Name = "Distance"
+    distanceLabel.Text = "Distance: 0 studs"
+    distanceLabel.TextColor3 = Color3.fromRGB(100, 150, 255)
+    distanceLabel.TextSize = 14
+    distanceLabel.Font = Enum.Font.Gotham
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.Size = UDim2.new(1, -10, 0, 20)
+    distanceLabel.Position = UDim2.new(0, 10, 0, 70)
+    distanceLabel.TextXAlignment = Enum.TextXAlignment.Left
+    distanceLabel.Parent = frame
+    
+    screenGui.Parent = game:GetService("CoreGui")
+    self.InfoFrame = screenGui
+    
+    -- Start hidden
+    frame.Visible = false
+end
+
+function TargetInfo:UpdateInfo(target)
+    if not self.Enabled or not self.InfoFrame then return end
+    
+    local frame = self.InfoFrame:FindFirstChild("TargetInfoFrame")
+    if not frame then return end
+    
+    if not target or not target.Character then
+        frame.Visible = false
+        return
+    end
+    
+    local character = target.Character
+    local humanoid = character:FindFirstChild("Humanoid")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    local localRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    
+    if not humanoid or not rootPart then
+        frame.Visible = false
+        return
+    end
+    
+    frame.Visible = true
+    
+    -- Update player name
+    local nameLabel = frame:FindFirstChild("PlayerName")
+    if nameLabel then
+        nameLabel.Text = "Player: " .. target.Name
+    end
+    
+    -- Update health
+    local healthLabel = frame:FindFirstChild("Health")
+    if healthLabel then
+        local health = math.floor(humanoid.Health)
+        local maxHealth = math.floor(humanoid.MaxHealth)
+        healthLabel.Text = "Health: " .. health .. "/" .. maxHealth
+        
+        -- Color based on health percentage
+        local healthPercent = health / maxHealth
+        if healthPercent > 0.5 then
+            healthLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        elseif healthPercent > 0.25 then
+            healthLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+        else
+            healthLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        end
+    end
+    
+    -- Update distance
+    local distanceLabel = frame:FindFirstChild("Distance")
+    if distanceLabel and localRootPart then
+        local distance = math.floor((rootPart.Position - localRootPart.Position).Magnitude)
+        distanceLabel.Text = "Distance: " .. distance .. " studs"
+    end
+end
+
+function TargetInfo:Start()
+    if self.Enabled then return end
+    
+    self.Enabled = true
+    self:CreateInfoFrame()
+    
+    -- Update target info in render loop
+    self.Connection = RunService.RenderStepped:Connect(function()
+        if Camlock.Enabled and Camlock.Target then
+            self:UpdateInfo(Camlock.Target)
+        elseif self.InfoFrame then
+            local frame = self.InfoFrame:FindFirstChild("TargetInfoFrame")
+            if frame then
+                frame.Visible = false
+            end
+        end
+    end)
+end
+
+function TargetInfo:Stop()
+    if not self.Enabled then return end
+    
+    self.Enabled = false
+    
+    if self.Connection then
+        self.Connection:Disconnect()
+        self.Connection = nil
+    end
+    
+    if self.InfoFrame then
+        local frame = self.InfoFrame:FindFirstChild("TargetInfoFrame")
+        if frame then
+            frame.Visible = false
+        end
+    end
+end
+end
+-- Snippet 4/5: UI Setup and Systems
 -- Snippet 4/5: UI Setup and Systems
     local InfoTab = Window:Tab({
         Title = "Info",
@@ -1264,7 +1416,7 @@ end
         end
     })
     
-            local mobileCamlockToggle = CamlockTab:Toggle({
+    local mobileCamlockToggle = CamlockTab:Toggle({
     Title = "Mobile Camlock Button",
     Desc = "Show mobile button for camlock control (Mobile users)",
     Value = ConfigManager:Get("MobileCamlockButton"),
@@ -1289,6 +1441,54 @@ end
         end
     end
 })
+
+local targetInfoToggle = CamlockTab:Toggle({
+    Title = "Target Info Display",
+    Desc = "Show information about the locked target",
+    Value = false,
+    Callback = function(state)
+        if state then
+            TargetInfo:Start()
+            WindUI:Notify({
+                Title = "Target Info",
+                Content = "Target info display enabled",
+                Duration = 2,
+                Icon = "info"
+            })
+        else
+            TargetInfo:Stop()
+            WindUI:Notify({
+                Title = "Target Info",
+                Content = "Target info display disabled",
+                Duration = 2,
+                Icon = "info-off"
+            })
+        end
+    end
+})
+
+-- Add smoothness slider for camlock
+local smoothnessSlider = CamlockTab:Slider({
+    Title = "Camlock Smoothness",
+    Desc = "How smooth the camera movement is (lower = snappier)",
+    Value = {
+        Min = 0.01,
+        Max = 1.0,
+        Default = 0.05,
+    },
+    Callback = function(value)
+        Camlock.Smoothness = tonumber(value)
+        WindUI:Notify({
+            Title = "Camlock Settings",
+            Content = "Camlock smoothness set to " .. string.format("%.2f", value),
+            Duration = 2,
+            Icon = "settings"
+        })
+    end
+})
+
+-- Initialize smoothness
+Camlock.Smoothness = 0.01
 -- Snippet 5/5: ESP Systems and Final Initialization
     -- ESP Tab Elements
     ESPTab:Section({
@@ -1801,42 +2001,44 @@ local highPingToggle = ESPTab:Toggle({
     }
     
     function BlockESP:CreateBlockIndicator(character)
-        if self.Indicators[character] then return self.Indicators[character] end
-        
-        local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
-        if not torso then return nil end
-        
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "BlockIndicator"
-        billboard.Adornee = torso
-        billboard.Size = UDim2.new(4, 0, 4, 0)
-        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-        billboard.AlwaysOnTop = true
-        billboard.MaxDistance = 200
-        billboard.Parent = character
-        
-        local imageLabel = Instance.new("ImageLabel")
-        imageLabel.Name = "BlockIcon"
-        imageLabel.Size = UDim2.new(1, 0, 1, 0)
-        imageLabel.BackgroundTransparency = 1
-        imageLabel.Image = self.BlockImageId
-        imageLabel.ImageTransparency = 0.4
-        imageLabel.Parent = billboard
-        
-        task.spawn(function()
-            while billboard and billboard.Parent and self.Enabled do
-                for i = 0, 1, 0.1 do
-                    if not billboard or not billboard.Parent or not self.Enabled then break end
-                    local pulse = 0.4 + (math.sin(i * math.pi) * 0.3)
-                    imageLabel.ImageTransparency = pulse
-                    task.wait(0.05)
-                end
+    if self.Indicators[character] then return self.Indicators[character] end
+    
+    local head = character:FindFirstChild("Head")
+    if not head then return nil end
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "BlockIndicator"
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0, 100, 0, 100)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = 200
+    billboard.Parent = head
+    
+    local label = Instance.new("TextLabel")
+    label.Name = "BlockIcon"
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = "🛡️"  -- Shield emoji
+    label.TextColor3 = Color3.fromRGB(100, 150, 255)
+    label.TextSize = 24
+    label.Font = Enum.Font.GothamBold
+    label.Parent = billboard
+    
+    task.spawn(function()
+        while billboard and billboard.Parent and self.Enabled do
+            for i = 0, 1, 0.1 do
+                if not billboard or not billboard.Parent or not self.Enabled then break end
+                local alpha = 0.3 + (math.sin(i * math.pi) * 0.7)
+                label.TextTransparency = alpha
+                task.wait(0.05)
             end
-        end)
-        
-        self.Indicators[character] = billboard
-        return billboard
-    end
+        end
+    end)
+    
+    self.Indicators[character] = billboard
+    return billboard
+endend
     
     function BlockESP:RemoveBlockIndicator(character)
         if self.Indicators[character] then
@@ -1846,33 +2048,72 @@ local highPingToggle = ESPTab:Toggle({
     end
     
     function BlockESP:SetupPlayer(player)
-        if player == LocalPlayer then return end
+    if player == LocalPlayer then return end
+    
+    local charAddedConn = player.CharacterAdded:Connect(function(character)
+        task.wait(1)
         
-        local charAddedConn = player.CharacterAdded:Connect(function(character)
-            task.wait(1)
+        local humanoid = character:WaitForChild("Humanoid", 3)
+        if not humanoid then return end
+        
+        local animationConn = humanoid.AnimationPlayed:Connect(function(track)
+            if not self.Enabled then return end
             
-            local humanoid = character:WaitForChild("Humanoid", 3)
-            if not humanoid then return end
-            
+            -- Check for block animation
+            if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                local billboard = self:CreateBlockIndicator(character)
+                
+                track.Stopped:Connect(function()
+                    if billboard and billboard.Parent then
+                        self:RemoveBlockIndicator(character)
+                    end
+                end)
+                
+                humanoid.Died:Connect(function()
+                    self:RemoveBlockIndicator(character)
+                end)
+            end
+        end)
+        
+        table.insert(self.Connections, animationConn)
+        
+        -- Check for already playing block animations
+        for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+            if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                self:CreateBlockIndicator(character)
+            end
+        end
+    end)
+    
+    table.insert(self.Connections, charAddedConn)
+    
+    if player.Character then
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
             local animationConn = humanoid.AnimationPlayed:Connect(function(track)
                 if not self.Enabled then return end
                 
                 if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
-                    local billboard = self:CreateBlockIndicator(character)
+                    local billboard = self:CreateBlockIndicator(player.Character)
                     
-                    track.Stopped:Connect(function()
-                        if billboard and billboard.Parent then
-                            self:RemoveBlockIndicator(character)
-                        end
-                    end)
-                    
-                    humanoid.Died:Connect(function()
-                        self:RemoveBlockIndicator(character)
-                    end)
+                    if billboard then
+                        track.Stopped:Connect(function()
+                            self:RemoveBlockIndicator(player.Character)
+                        end)
+                    end
                 end
             end)
             
             table.insert(self.Connections, animationConn)
+            
+            for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+                if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                    self:CreateBlockIndicator(player.Character)
+                end
+            end
+        end
+    end
+end
             
             for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
                 if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
@@ -2319,7 +2560,10 @@ task.spawn(function()
         task.wait(0.5) -- Extra delay for mobile button
         Camlock:CreateMobileButton()
     end
-    
+    -- Target Info
+    if targetInfoToggle then
+        targetInfoToggle:SetValue(false)  -- Start disabled by default
+    end
     -- Counter ESP
     if ConfigManager:Get("CounterESPEnabled") then
         CounterESP:Start()
