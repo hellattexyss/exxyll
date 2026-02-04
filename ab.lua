@@ -463,10 +463,6 @@ function Camlock:CreateMobileButton()
     -- Simple click handler (toggle camlock when clicked)
     button.MouseButton1Click:Connect(function()
         self:Toggle()
-        -- Also update the PC toggle in WindUI if it exists
-        if camlockToggle and typeof(camlockToggle.SetValue) == "function" then
-            camlockToggle:SetValue(self.Enabled)
-        end
     end)
     
     -- SIMPLIFIED DRAGGING - Works for both mouse and touch
@@ -1407,7 +1403,8 @@ end
         Desc = "Automatically lock camera to nearest enemy"
     })
     
-    local camlockToggle = CamlockTab:Toggle({
+    local camlockToggle
+camlockToggle = CamlockTab:Toggle({
     Title = "Camlock (PC)",
     Desc = "Enable camera lock to nearest enemy for PC users",
     Value = ConfigManager:Get("CamlockEnabled"),
@@ -1418,7 +1415,9 @@ end
             local success = Camlock:Start()
             if not success then
                 ConfigManager:Set("CamlockEnabled", false)
-                camlockToggle:SetValue(false)
+                if camlockToggle then
+                    camlockToggle:SetValue(false)
+                end
             end
         else
             Camlock:Stop()
