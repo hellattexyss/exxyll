@@ -1512,25 +1512,38 @@ local targetInfoToggle = CamlockTab:Toggle({
     end
 })
 
--- Add smoothness slider for camlock
+-- Fixed Smoothness Slider
 local smoothnessSlider = CamlockTab:Slider({
     Title = "Camlock Smoothness",
-    Desc = "How smooth the camera movement is (lower = snappier)",
+    Desc = "0.01 = Snappy | 0.1 = Normal | 0.2 = Smooth",
     Value = {
         Min = 0.01,
-        Max = 1.0,
+        Max = 0.2,
         Default = 0.05,
+        Round = 3,
     },
     Callback = function(value)
-        Camlock.Smoothness = tonumber(value)
-        WindUI:Notify({
-            Title = "Camlock Settings",
-            Content = "Camlock smoothness set to " .. string.format("%.2f", value),
-            Duration = 2,
-            Icon = "settings"
-        })
+        local smoothValue = tonumber(value)
+        if smoothValue then
+            Camlock.Smoothness = smoothValue
+            ConfigManager:Set("CamlockSmoothness", smoothValue)
+            
+            WindUI:Notify({
+                Title = "Camlock Settings",
+                Content = "Smoothness: " .. string.format("%.3f", smoothValue),
+                Duration = 2,
+                Icon = "settings"
+            })
+        end
     end
 })
+
+-- Load saved smoothness
+local savedSmoothness = ConfigManager:Get("CamlockSmoothness") or 0.05
+Camlock.Smoothness = savedSmoothness
+if smoothnessSlider then
+    smoothnessSlider:SetValue(savedSmoothness)
+    end
 
 -- Snippet 5/5: ESP Systems and Final Initialization
     -- ESP Tab Elements
