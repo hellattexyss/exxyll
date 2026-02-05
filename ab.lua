@@ -465,45 +465,53 @@ function Camlock:CreateMobileButton()
         self:Toggle()
     end)
     
-    -- SIMPLIFIED DRAGGING - Works for both mouse and touch
-    local dragging = false
-    local dragInput, dragStart, startPos
-    
-    local function updateInput(input)
-        local delta = input.Position - dragStart
-        local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, 
-                                  startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        button.Position = newPos
+    -- Better dragging system
+local isDragging = false
+local dragStart = nil
+local startPosition = nil
+
+button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isDragging = false
+        dragStart = input.Position
+        startPosition = button.Position
+        task.wait(0.1) -- Small delay to differentiate click from drag
     end
-    
-    button.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = button.Position
-            
-            -- Capture input for smooth dragging
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
+end)
+
+button.InputChanged:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        if dragStart and (input.Position - dragStart).Magnitude > 10 then -- 10 pixel threshold
+            isDragging = true
         end
-    end)
-    
-    button.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
+    end
+end)
+
+button.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if not isDragging then
+            -- It was a click, not a drag
+            self:Toggle()
         end
-    end)
+        isDragging = false
+        dragStart = nil
+    end
+end)
+
+-- Smooth dragging
+RunService.RenderStepped:Connect(function()
+    if isDragging and dragStart then
+        local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+        local delta = Vector2.new(mouse.X, mouse.Y) - dragStart
+        button.Position = UDim2.new(
+            startPosition.X.Scale,
+            startPosition.X.Offset + delta.X,
+            startPosition.Y.Scale,
+            startPosition.Y.Offset + delta.Y
+        )
+    end
+end)
     
-    -- Smooth dragging during render step
-    local dragConnection
-    dragConnection = RunService.RenderStepped:Connect(function()
-        if dragging and dragInput then
-            updateInput(dragInput)
-        end
-    end)
     
     -- Store connection for cleanup
     if not self.MobileConnections then
