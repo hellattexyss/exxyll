@@ -2378,7 +2378,7 @@ local blockESPToggle = ESPTab:Toggle({
             toxicMessageInput:SetValue(defaultConfig.AutoToxicMessage)
             repeatSlider:SetValue(defaultConfig.AutoToxicRepeat)
             cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown)
-            keybindButton:SetTitle("Change Keybind (Currently: " .. defaultConfig.CamlockKeybind .. ")")
+            keybindInput:SetDescription("Current: " .. defaultConfig.CamlockKeybind)
             
             if AutoBlock.Enabled then
                 AutoBlock:Stop()
