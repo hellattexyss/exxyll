@@ -1433,33 +1433,7 @@ camlockToggle = CamlockTab:Toggle({
     end
 })
     
-    local keybindButton = CamlockTab:Button({
-        Title = "Change Keybind (Currently: " .. ConfigManager:Get("CamlockKeybind") .. ")",
-        Desc = "Click then press a key to set as camlock toggle",
-        Callback = function()
-            WindUI:Notify({
-                Title = "Keybind Setup",
-                Content = "Press any key to set as camlock toggle...",
-                Duration = 5,
-                Icon = "key"
-            })
-            
-            local input = game:GetService("UserInputService").InputBegan:Wait()
-            local key = input.KeyCode.Name
-            
-            ConfigManager:Set("CamlockKeybind", key)
-            keybindButton:SetTitle("Change Keybind (Currently: " .. key .. ")")
-            
-            Camlock:SetupKeybind()
-            
-            WindUI:Notify({
-                Title = "Keybind Updated",
-                Content = "Camlock keybind set to: " .. key,
-                Duration = 3,
-                Icon = "check"
-            })
-        end
-    })
+    
     
     local mobileCamlockToggle = CamlockTab:Toggle({
     Title = "Mobile Camlock Button",
@@ -1477,7 +1451,27 @@ camlockToggle = CamlockTab:Toggle({
             })
         else
             Camlock:RemoveMobileButton()
+     -- Keybind Input
+local keybindInput = CamlockTab:Input({
+    Title = "Camlock Keybind",
+    Desc = "Current: " .. ConfigManager:Get("CamlockKeybind"),
+    Value = ConfigManager:Get("CamlockKeybind"),
+    Type = "Input",
+    Placeholder = "Press Q, E, R, etc...",
+    Callback = function(input)
+        if input and input ~= "" then
+            ConfigManager:Set("CamlockKeybind", input:upper())
+            Camlock:SetupKeybind()
+            keybindInput:SetDescription("Current: " .. input:upper())
             WindUI:Notify({
+                Title = "Keybind Updated",
+                Content = "Camlock keybind set to: " .. input:upper(),
+                Duration = 2,
+                Icon = "key"
+            })
+        end
+    end
+})       WindUI:Notify({
                 Title = "Mobile Button",
                 Content = "Mobile camlock button removed",
                 Duration = 2,
