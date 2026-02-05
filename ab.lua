@@ -1529,340 +1529,350 @@ Camlock.Smoothness = savedSmoothness
 if smoothnessSlider then
     smoothnessSlider:SetValue(savedSmoothness)
     end
-
--- Snippet 5/5: ESP Systems and Final Initialization
-    -- ESP Tab Elements
-    ESPTab:Section({
-        Title = "ESP Systems",
-        Desc = "Visual indicators utility"
-    })
-    
-    -- Counter ESP System
-    local CounterESP = {
-        Enabled = false,
-        Highlights = {},
-        Timers = {},
-        Connections = {}
-    }
-    
-    function CounterESP:GetCounterAnimation(humanoid)
-        local whiteCounter = ConfigManager:Get("WhiteCounterAnimation")
-        local blueCounter = ConfigManager:Get("BlueCounterAnimation")
         
-        for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-            if track.Animation then
-                local animId = track.Animation.AnimationId
-                if animId == whiteCounter or animId == blueCounter then
-                    return animId
-                end
-            end
-        end
-        return nil
-    end
-    
-    function CounterESP:AddHighlight(character)
-        if not self.Highlights[character] then
-            local highlight = Instance.new("Highlight")
-            highlight.FillColor = Color3.fromRGB(100, 150, 255)
-            highlight.OutlineColor = Color3.fromRGB(200, 220, 255)
-            highlight.FillTransparency = 0.3
-            highlight.OutlineTransparency = 0
-            highlight.Parent = character
-            self.Highlights[character] = highlight
-        end
-    end
-    
-    function CounterESP:RemoveHighlight(character, fade)
-        local highlight = self.Highlights[character]
-        if highlight then
-            if fade then
-                for i = 0.3, 1, 0.1 do
-                    if highlight then
-                        highlight.FillTransparency = i
-                        highlight.OutlineTransparency = i
-                    end
-                    task.wait(0.05)
-                end
-            end
-            if highlight then
-                highlight:Destroy()
-            end
-            self.Highlights[character] = nil
-        end
-        self.Timers[character] = nil
-    end
-    
-    function CounterESP:CheckCounters()
-        if not self.Enabled then return end
-        
-        local character = LocalPlayer.Character
-        if not character then return end
-        
-        local rootPart = character:FindFirstChild("HumanoidRootPart")
-        if not rootPart then return end
-        
-        local counterRange = ConfigManager:Get("CounterRange")
-        
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                local otherCharacter = player.Character
-                local otherRootPart = otherCharacter:FindFirstChild("HumanoidRootPart")
-                local otherHumanoid = otherCharacter:FindFirstChild("Humanoid")
-                
-                if otherRootPart and otherHumanoid and (rootPart.Position - otherRootPart.Position).Magnitude <= counterRange then
-                    local counterAnimation = self:GetCounterAnimation(otherHumanoid)
-                    if counterAnimation and not self.Timers[otherCharacter] then
-                        self:AddHighlight(otherCharacter)
-                        self.Timers[otherCharacter] = tick()
-                        
-                        game:GetService("StarterGui"):SetCore("SendNotification", {
-                            Title = "Counter Detected!",
-                            Text = player.Name .. " used a counter move",
-                            Duration = 1.2,
-                        })
-                        
-                        task.delay(4, function()
-                            self:RemoveHighlight(otherCharacter, true)
-                            game:GetService("StarterGui"):SetCore("SendNotification", {
-                                Title = "Counter Ended",
-                                Text = player.Name .. "'s counter move cooldown has ended",
-                                Duration = 1.2,
-                            })
-                        end)
-                    end
-                end
-            end
-        end
-    end
-    
-    function CounterESP:Start()
-        if self.Enabled then return end
-        
-        self.Enabled = true
-        
-        local heartbeatConn = RunService.Heartbeat:Connect(function()
-            self:CheckCounters()
-        end)
-        
-        table.insert(self.Connections, heartbeatConn)
-    end
-    
-    function CounterESP:Stop()
-        if not self.Enabled then return end
-        
-        self.Enabled = false
-        
-        for character, highlight in pairs(self.Highlights) do
-            if highlight then
-                self:RemoveHighlight(character, true)
-            end
-        end
-        
-        for _, conn in ipairs(self.Connections) do
-            if conn then
-                pcall(function() conn:Disconnect() end)
-            end
-        end
-        self.Connections = {}
-        self.Highlights = {}
-        self.Timers = {}
-    end
-    
-    local counterESPToggle = ESPTab:Toggle({
-        Title = "Counter ESP",
-        Desc = "Highlights enemies when they use counter.",
-        Value = ConfigManager:Get("CounterESPEnabled"),
-        Callback = function(state)
-            ConfigManager:Set("CounterESPEnabled", state)
-            if state then
-                CounterESP:Start()
-                WindUI:Notify({
-                    Title = "Counter ESP",
-                    Content = "Counter ESP activated (4s Blue Highlight)",
-                    Duration = 2,
-                    Icon = "eye"
-                })
-            else
-                CounterESP:Stop()
-                WindUI:Notify({
-                    Title = "Counter ESP",
-                    Content = "Counter ESP deactivated",
-                    Duration = 2,
-                    Icon = "eye-off"
-                })
-            end
-        end
-    })
-
-    -- Ping Display ESP System
-    local PingESP = {
-        Enabled = false,
-        GuiFolder = nil,
-        Connections = {}
-    }
-    
-    function PingESP:CreateBillboard(player)
-        if player == LocalPlayer then return nil end
-        
-        local bb = Instance.new("BillboardGui")
-        bb.Name = "PingDisplay_" .. player.Name
-        bb.Size = UDim2.new(0, 100, 0, 40)
-        bb.AlwaysOnTop = true
-        bb.MaxDistance = 300
-        bb.StudsOffset = Vector3.new(0, 3, 0)
-        
-        local label = Instance.new("TextLabel")
-        label.Name = "PingLabel"
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.Font = Enum.Font.GothamBold
-        label.TextSize = 14
-        label.TextStrokeTransparency = 0.5
-        label.TextStrokeColor3 = Color3.new(0, 0, 0)
-        label.Text = "0ms"
-        label.Parent = bb
-        
-        return bb
-    end
-    
-    function PingESP:UpdatePingColor(label, ping)
-        ping = ping or 0
-        
-        if ping < 50 then
-            label.TextColor3 = Color3.fromRGB(50, 255, 50)
-        elseif ping < 150 then
-            label.TextColor3 = Color3.fromRGB(255, 255, 50)
-        else
-            label.TextColor3 = Color3.fromRGB(255, 50, 50)
-        end
-    end
-    
-    function PingESP:Start()
-        if self.Enabled then return end
-        
-        self.Enabled = true
-        
-        self.GuiFolder = Instance.new("Folder")
-        self.GuiFolder.Name = "PingESP"
-        self.GuiFolder.Parent = game:GetService("CoreGui")
-        
-        for _, player in ipairs(Players:GetPlayers()) do
-            self:SetupPlayer(player)
-        end
-        
-        local playerAddedConn = Players.PlayerAdded:Connect(function(player)
-            self:SetupPlayer(player)
-        end)
-        
-        table.insert(self.Connections, playerAddedConn)
-        
-        WindUI:Notify({
-            Title = "Ping Display ESP",
-            Content = "Ping Display ESP activated",
-            Duration = 2,
-            Icon = "wifi"
-        })
-    end
-    
-    function PingESP:SetupPlayer(player)
-        if player == LocalPlayer then return end
-        
-        local bb = self:CreateBillboard(player)
-        if not bb then return end
-        
-        bb.Parent = self.GuiFolder
-        
-        local heartbeatConn = RunService.Heartbeat:Connect(function()
-            if not self.Enabled or not bb or not bb.Parent then
-                heartbeatConn:Disconnect()
-                return
-            end
-            
-            local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                bb.Adornee = character.HumanoidRootPart
-                
-                local ping = player:GetAttribute("Ping") or 0
-                local pingValue = math.floor(ping)
-                
-                if bb:FindFirstChild("PingLabel") then
-                    local label = bb.PingLabel
-                    label.Text = tostring(pingValue) .. "ms"
-                    self:UpdatePingColor(label, pingValue)
-                    
-                    local humanoid = character:FindFirstChild("Humanoid")
-                    if humanoid and humanoid.Health <= 0 then
-                        label.TextColor3 = Color3.fromRGB(100, 100, 100)
-                    end
-                end
-            else
-                bb.Adornee = nil
-            end
-        end)
-        
-        local charAddedConn = player.CharacterAdded:Connect(function(character)
-            task.wait(1)
-            if self.Enabled and bb and bb.Parent then
-                local rootPart = character:WaitForChild("HumanoidRootPart", 3)
-                if rootPart then
-                    bb.Adornee = rootPart
-                end
-            end
-        end)
-        
-        table.insert(self.Connections, heartbeatConn)
-        table.insert(self.Connections, charAddedConn)
-    end
-    
-    function PingESP:Stop()
-        if not self.Enabled then return end
-        
-        self.Enabled = false
-        
-        if self.GuiFolder then
-            self.GuiFolder:Destroy()
-            self.GuiFolder = nil
-        end
-        
-        for _, conn in ipairs(self.Connections) do
-            if conn then
-                pcall(function() conn:Disconnect() end)
-            end
-        end
-        self.Connections = {}
-        
-        WindUI:Notify({
-            Title = "Ping Display ESP",
-            Content = "Ping Display ESP deactivated",
-            Duration = 2,
-            Icon = "wifi-off"
-        })
-    end
-    
-    local pingESPToggle = ESPTab:Toggle({
-        Title = "Ping Display ESP",
-        Desc = "Shows player ping above their heads.",
-        Value = ConfigManager:Get("PingESPEnabled"),
-        Callback = function(state)
-            ConfigManager:Set("PingESPEnabled", state)
-            if state then
-                PingESP:Start()
-            else
-                PingESP:Stop()
-            end
-        end
-    })
 
     -- Fixed High Ping Warning System
-    -- REPLACE the entire HighPingWarning system with this:
+    -- ESP Tab Elements
+ESPTab:Section({
+    Title = "Counter ESP",
+    Desc = "Detect when enemies use counter moves"
+})
+
+-- Counter ESP System
+local CounterESP = {
+    Enabled = false,
+    Highlights = {},
+    Timers = {},
+    Connections = {}
+}
+
+function CounterESP:GetCounterAnimation(humanoid)
+    local whiteCounter = ConfigManager:Get("WhiteCounterAnimation")
+    local blueCounter = ConfigManager:Get("BlueCounterAnimation")
+    
+    for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+        if track.Animation then
+            local animId = track.Animation.AnimationId
+            if animId == whiteCounter or animId == blueCounter then
+                return animId
+            end
+        end
+    end
+    return nil
+end
+
+function CounterESP:AddHighlight(character)
+    if not self.Highlights[character] then
+        local highlight = Instance.new("Highlight")
+        highlight.FillColor = Color3.fromRGB(100, 150, 255)
+        highlight.OutlineColor = Color3.fromRGB(200, 220, 255)
+        highlight.FillTransparency = 0.3
+        highlight.OutlineTransparency = 0
+        highlight.Parent = character
+        self.Highlights[character] = highlight
+    end
+end
+
+function CounterESP:RemoveHighlight(character, fade)
+    local highlight = self.Highlights[character]
+    if highlight then
+        if fade then
+            for i = 0.3, 1, 0.1 do
+                if highlight then
+                    highlight.FillTransparency = i
+                    highlight.OutlineTransparency = i
+                end
+                task.wait(0.05)
+            end
+        end
+        if highlight then
+            highlight:Destroy()
+        end
+        self.Highlights[character] = nil
+    end
+    self.Timers[character] = nil
+end
+
+function CounterESP:CheckCounters()
+    if not self.Enabled then return end
+    
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+    
+    local counterRange = ConfigManager:Get("CounterRange")
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local otherCharacter = player.Character
+            local otherRootPart = otherCharacter:FindFirstChild("HumanoidRootPart")
+            local otherHumanoid = otherCharacter:FindFirstChild("Humanoid")
+            
+            if otherRootPart and otherHumanoid and (rootPart.Position - otherRootPart.Position).Magnitude <= counterRange then
+                local counterAnimation = self:GetCounterAnimation(otherHumanoid)
+                if counterAnimation and not self.Timers[otherCharacter] then
+                    self:AddHighlight(otherCharacter)
+                    self.Timers[otherCharacter] = tick()
+                    
+                    game:GetService("StarterGui"):SetCore("SendNotification", {
+                        Title = "Counter Detected!",
+                        Text = player.Name .. " used a counter move",
+                        Duration = 1.2,
+                    })
+                    
+                    task.delay(4, function()
+                        self:RemoveHighlight(otherCharacter, true)
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "Counter Ended",
+                            Text = player.Name .. "'s counter move cooldown has ended",
+                            Duration = 1.2,
+                        })
+                    end)
+                end
+            end
+        end
+    end
+end
+
+function CounterESP:Start()
+    if self.Enabled then return end
+    
+    self.Enabled = true
+    
+    local heartbeatConn = RunService.Heartbeat:Connect(function()
+        self:CheckCounters()
+    end)
+    
+    table.insert(self.Connections, heartbeatConn)
+end
+
+function CounterESP:Stop()
+    if not self.Enabled then return end
+    
+    self.Enabled = false
+    
+    for character, highlight in pairs(self.Highlights) do
+        if highlight then
+            self:RemoveHighlight(character, true)
+        end
+    end
+    
+    for _, conn in ipairs(self.Connections) do
+        if conn then
+            pcall(function() conn:Disconnect() end)
+        end
+    end
+    self.Connections = {}
+    self.Highlights = {}
+    self.Timers = {}
+end
+
+local counterESPToggle = ESPTab:Toggle({
+    Title = "Counter ESP",
+    Desc = "Highlights enemies when they use counter.",
+    Value = ConfigManager:Get("CounterESPEnabled"),
+    Callback = function(state)
+        ConfigManager:Set("CounterESPEnabled", state)
+        if state then
+            CounterESP:Start()
+            WindUI:Notify({
+                Title = "Counter ESP",
+                Content = "Counter ESP activated (4s Blue Highlight)",
+                Duration = 2,
+                Icon = "eye"
+            })
+        else
+            CounterESP:Stop()
+            WindUI:Notify({
+                Title = "Counter ESP",
+                Content = "Counter ESP deactivated",
+                Duration = 2,
+                Icon = "eye-off"
+            })
+        end
+    end
+})
+
+ESPTab:Section({
+    Title = "Ping Display ESP",
+    Desc = "Show player ping above their heads"
+})
+
+-- Ping Display ESP System
+local PingESP = {
+    Enabled = false,
+    GuiFolder = nil,
+    Connections = {}
+}
+
+function PingESP:CreateBillboard(player)
+    if player == LocalPlayer then return nil end
+    
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "PingDisplay_" .. player.Name
+    bb.Size = UDim2.new(0, 100, 0, 40)
+    bb.AlwaysOnTop = true
+    bb.MaxDistance = 300
+    bb.StudsOffset = Vector3.new(0, 3, 0)
+    
+    local label = Instance.new("TextLabel")
+    label.Name = "PingLabel"
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 14
+    label.TextStrokeTransparency = 0.5
+    label.TextStrokeColor3 = Color3.new(0, 0, 0)
+    label.Text = "0ms"
+    label.Parent = bb
+    
+    return bb
+end
+
+function PingESP:UpdatePingColor(label, ping)
+    ping = ping or 0
+    
+    if ping < 50 then
+        label.TextColor3 = Color3.fromRGB(50, 255, 50)
+    elseif ping < 150 then
+        label.TextColor3 = Color3.fromRGB(255, 255, 50)
+    else
+        label.TextColor3 = Color3.fromRGB(255, 50, 50)
+    end
+end
+
+function PingESP:Start()
+    if self.Enabled then return end
+    
+    self.Enabled = true
+    
+    self.GuiFolder = Instance.new("Folder")
+    self.GuiFolder.Name = "PingESP"
+    self.GuiFolder.Parent = game:GetService("CoreGui")
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        self:SetupPlayer(player)
+    end
+    
+    local playerAddedConn = Players.PlayerAdded:Connect(function(player)
+        self:SetupPlayer(player)
+    end)
+    
+    table.insert(self.Connections, playerAddedConn)
+    
+    WindUI:Notify({
+        Title = "Ping Display ESP",
+        Content = "Ping Display ESP activated",
+        Duration = 2,
+        Icon = "wifi"
+    })
+end
+
+function PingESP:SetupPlayer(player)
+    if player == LocalPlayer then return end
+    
+    local bb = self:CreateBillboard(player)
+    if not bb then return end
+    
+    bb.Parent = self.GuiFolder
+    
+    local heartbeatConn = RunService.Heartbeat:Connect(function()
+        if not self.Enabled or not bb or not bb.Parent then
+            heartbeatConn:Disconnect()
+            return
+        end
+        
+        local character = player.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            bb.Adornee = character.HumanoidRootPart
+            
+            local ping = player:GetAttribute("Ping") or 0
+            local pingValue = math.floor(ping)
+            
+            if bb:FindFirstChild("PingLabel") then
+                local label = bb.PingLabel
+                label.Text = tostring(pingValue) .. "ms"
+                self:UpdatePingColor(label, pingValue)
+                
+                local humanoid = character:FindFirstChild("Humanoid")
+                if humanoid and humanoid.Health <= 0 then
+                    label.TextColor3 = Color3.fromRGB(100, 100, 100)
+                end
+            end
+        else
+            bb.Adornee = nil
+        end
+    end)
+    
+    local charAddedConn = player.CharacterAdded:Connect(function(character)
+        task.wait(1)
+        if self.Enabled and bb and bb.Parent then
+            local rootPart = character:WaitForChild("HumanoidRootPart", 3)
+            if rootPart then
+                bb.Adornee = rootPart
+            end
+        end
+    end)
+    
+    table.insert(self.Connections, heartbeatConn)
+    table.insert(self.Connections, charAddedConn)
+end
+
+function PingESP:Stop()
+    if not self.Enabled then return end
+    
+    self.Enabled = false
+    
+    if self.GuiFolder then
+        self.GuiFolder:Destroy()
+        self.GuiFolder = nil
+    end
+    
+    for _, conn in ipairs(self.Connections) do
+        if conn then
+            pcall(function() conn:Disconnect() end)
+        end
+    end
+    self.Connections = {}
+    
+    WindUI:Notify({
+        Title = "Ping Display ESP",
+        Content = "Ping Display ESP deactivated",
+        Duration = 2,
+        Icon = "wifi-off"
+    })
+end
+
+local pingESPToggle = ESPTab:Toggle({
+    Title = "Ping Display ESP",
+    Desc = "Shows player ping above their heads.",
+    Value = ConfigManager:Get("PingESPEnabled"),
+    Callback = function(state)
+        ConfigManager:Set("PingESPEnabled", state)
+        if state then
+            PingESP:Start()
+        else
+            PingESP:Stop()
+        end
+    end
+})
+
+ESPTab:Section({
+    Title = "High Ping Warning",
+    Desc = "Warns when your ping is too high"
+})
+
+-- High Ping Warning System
 local HighPingWarning = {
     Enabled = false,
-    Threshold = 105,  -- Changed from 150 to 105
+    Threshold = 105,
     WarningFrame = nil,
     Blinking = false,
     Connection = nil,
     LastPingCheck = 0,
-    PingCheckInterval = 1  -- Check every second
+    PingCheckInterval = 1
 }
 
 function HighPingWarning:CreateWarningFrame()
@@ -1924,7 +1934,6 @@ function HighPingWarning:CreateWarningFrame()
     screenGui.Parent = game:GetService("CoreGui")
     self.WarningFrame = screenGui
     
-    -- Start hidden
     frame.Visible = false
 end
 
@@ -1938,9 +1947,8 @@ function HighPingWarning:CheckPing()
     
     self.LastPingCheck = currentTime
     
-    -- Get player ping
     local success, ping = pcall(function()
-        return LocalPlayer:GetNetworkPing() * 1000  -- Convert to milliseconds
+        return LocalPlayer:GetNetworkPing() * 1000
     end)
     
     if not success then
@@ -2017,7 +2025,6 @@ function HighPingWarning:Stop()
     })
 end
 
--- Update the toggle in ESPTab to set threshold to 105
 local highPingToggle = ESPTab:Toggle({
     Title = "High Ping Warning",
     Desc = "Shows warning when ping is too high (105+ ms)",
@@ -2032,7 +2039,12 @@ local highPingToggle = ESPTab:Toggle({
     end
 })
 
-    -- Block ESP System (Shield Billboard Version)
+ESPTab:Section({
+    Title = "Block ESP",
+    Desc = "Shows when enemies are blocking"
+})
+
+-- Block ESP System
 local BlockESP = {
     Enabled = false,
     BlockAnimationId = "rbxassetid://10470389827",
@@ -2069,7 +2081,6 @@ function BlockESP:CreateShieldIndicator(character)
     label.TextStrokeColor3 = Color3.new(0, 0, 0)
     label.Parent = billboard
     
-    -- Pulsing effect
     task.spawn(function()
         local time = 0
         while billboard and billboard.Parent and self.Enabled do
@@ -2082,7 +2093,6 @@ function BlockESP:CreateShieldIndicator(character)
     
     self.Indicators[character] = billboard
     
-    -- Remove after 1.5 seconds
     task.delay(1.5, function()
         if billboard and billboard.Parent then
             billboard:Destroy()
@@ -2095,14 +2105,12 @@ function BlockESP:Start()
     if self.Enabled then return end
     self.Enabled = true
     
-    -- Check existing players
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             self:SetupPlayer(player)
         end
     end
     
-    -- Listen for new players
     Players.PlayerAdded:Connect(function(player)
         task.wait(1)
         if player.Character then
@@ -2124,7 +2132,6 @@ function BlockESP:SetupPlayer(player)
     local humanoid = char:FindFirstChild("Humanoid")
     if not humanoid then return end
     
-    -- Listen for block animations
     humanoid.AnimationPlayed:Connect(function(track)
         if not self.Enabled then return end
         if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
@@ -2132,7 +2139,6 @@ function BlockESP:SetupPlayer(player)
         end
     end)
     
-    -- Check if already blocking
     for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
         if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
             self:CreateShieldIndicator(char)
@@ -2166,156 +2172,164 @@ local blockESPToggle = ESPTab:Toggle({
     end
 })
 
-    -- Death Counter ESP System
-    local DeathCounterESP = {
-        Enabled = false,
-        State = {},
-        Billboards = {},
-        Connections = {}
-    }
-    
-    local strongSkills = {
-        ["Omni Directional Punch"] = true,
-        ["Death Counter"] = true,
-        ["Serious Punch"] = true,
-        ["Table Flip"] = true
-    }
-    
-    local weakSkills = {
-        ["Consecutive Punches"] = true,
-        ["Normal Punch"] = true,
-        ["Shove"] = true,
-        ["Uppercut"] = true
-    }
-    
-    function DeathCounterESP:GetSkillType(backpack)
-        for _, tool in ipairs(backpack:GetChildren()) do
-            if strongSkills[tool.Name] then return "strong" end
-            if weakSkills[tool.Name] then return "weak" end
-        end
-        return nil
-    end
-    
-    function DeathCounterESP:CreateBillboard(target, text)
-        if not (target and target:FindFirstChild("Head")) then return end
-        
-        local bb = target.Head:FindFirstChild("SkillTag") or Instance.new("BillboardGui")
-        bb.Name = "SkillTag"
-        bb.Size = UDim2.new(0, 100, 0, 40)
-        bb.StudsOffset = Vector3.new(0, 2.5, 0)
-        bb.Adornee = target.Head
-        bb.AlwaysOnTop = true
-        if not bb.Parent then bb.Parent = target.Head end
+ESPTab:Section({
+    Title = "Death Counter ESP",
+    Desc = "Detect enemy death counter skills"
+})
 
-        local label = bb:FindFirstChild("TextLabel") or Instance.new("TextLabel", bb)
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.Font = Enum.Font.GothamBold
-        label.TextScaled = true
-        label.TextColor3 = Color3.new(1, 1, 1)
-        label.TextStrokeTransparency = 0.5
-        label.Text = text
-        
-        self.Billboards[target] = bb
-    end
-    
-    function DeathCounterESP:RemoveBillboard(target)
-        if target and target:FindFirstChild("Head") and target.Head:FindFirstChild("SkillTag") then
-            target.Head.SkillTag:Destroy()
-            self.Billboards[target] = nil
-        end
-    end
-    
-    function DeathCounterESP:Start()
-        if self.Enabled then return end
-        
-        self.Enabled = true
-        
-        local heartbeatConn = RunService.Heartbeat:Connect(function()
-            if not self.Enabled then return end
-            
-            for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= LocalPlayer then
-                    local char = plr.Character
-                    local backpack = plr:FindFirstChildOfClass("Backpack")
-                    
-                    if char and backpack then
-                        local skillType = self:GetSkillType(backpack)
-                        local lastState = self.State[plr]
+-- Death Counter ESP System
+local DeathCounterESP = {
+    Enabled = false,
+    State = {},
+    Billboards = {},
+    Connections = {}
+}
 
-                        if not lastState then
-                            self.State[plr] = skillType
-                            if skillType == "strong" then
-                                self:CreateBillboard(char, "💥")
-                            else
-                                self:RemoveBillboard(char)
-                            end
+local strongSkills = {
+    ["Omni Directional Punch"] = true,
+    ["Death Counter"] = true,
+    ["Serious Punch"] = true,
+    ["Table Flip"] = true
+}
+
+local weakSkills = {
+    ["Consecutive Punches"] = true,
+    ["Normal Punch"] = true,
+    ["Shove"] = true,
+    ["Uppercut"] = true
+}
+
+function DeathCounterESP:GetSkillType(backpack)
+    for _, tool in ipairs(backpack:GetChildren()) do
+        if strongSkills[tool.Name] then return "strong" end
+        if weakSkills[tool.Name] then return "weak" end
+    end
+    return nil
+end
+
+function DeathCounterESP:CreateBillboard(target, text)
+    if not (target and target:FindFirstChild("Head")) then return end
+    
+    local bb = target.Head:FindFirstChild("SkillTag") or Instance.new("BillboardGui")
+    bb.Name = "SkillTag"
+    bb.Size = UDim2.new(0, 100, 0, 40)
+    bb.StudsOffset = Vector3.new(0, 2.5, 0)
+    bb.Adornee = target.Head
+    bb.AlwaysOnTop = true
+    if not bb.Parent then bb.Parent = target.Head end
+
+    local label = bb:FindFirstChild("TextLabel") or Instance.new("TextLabel", bb)
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold
+    label.TextScaled = true
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.TextStrokeTransparency = 0.5
+    label.Text = text
+    
+    self.Billboards[target] = bb
+end
+
+function DeathCounterESP:RemoveBillboard(target)
+    if target and target:FindFirstChild("Head") and target.Head:FindFirstChild("SkillTag") then
+        target.Head.SkillTag:Destroy()
+        self.Billboards[target] = nil
+    end
+end
+
+function DeathCounterESP:Start()
+    if self.Enabled then return end
+    
+    self.Enabled = true
+    
+    local heartbeatConn = RunService.Heartbeat:Connect(function()
+        if not self.Enabled then return end
+        
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer then
+                local char = plr.Character
+                local backpack = plr:FindFirstChildOfClass("Backpack")
+                
+                if char and backpack then
+                    local skillType = self:GetSkillType(backpack)
+                    local lastState = self.State[plr]
+
+                    if not lastState then
+                        self.State[plr] = skillType
+                        if skillType == "strong" then
+                            self:CreateBillboard(char, "💥")
                         else
-                            if skillType == "strong" then
-                                if lastState ~= "strong" then
-                                    self:CreateBillboard(char, "💥")
-                                end
-                                self.State[plr] = "strong"
-                            elseif skillType == "weak" and lastState == "strong" then
-                                self:CreateBillboard(char, "💢")
-                                self.State[plr] = "weak"
-                                task.delay(math.random(8, 9), function()
-                                    if self.State[plr] == "weak" then
-                                        self:RemoveBillboard(char)
-                                    end
-                                end)
+                            self:RemoveBillboard(char)
+                        end
+                    else
+                        if skillType == "strong" then
+                            if lastState ~= "strong" then
+                                self:CreateBillboard(char, "💥")
                             end
+                            self.State[plr] = "strong"
+                        elseif skillType == "weak" and lastState == "strong" then
+                            self:CreateBillboard(char, "💢")
+                            self.State[plr] = "weak"
+                            task.delay(math.random(8, 9), function()
+                                if self.State[plr] == "weak" then
+                                    self:RemoveBillboard(char)
+                                end
+                            end)
                         end
                     end
                 end
             end
-        end)
-        
-        table.insert(self.Connections, heartbeatConn)
+        end
+    end)
+    
+    table.insert(self.Connections, heartbeatConn)
+end
+
+function DeathCounterESP:Stop()
+    if not self.Enabled then return end
+    
+    self.Enabled = false
+    
+    for target, _ in pairs(self.Billboards) do
+        self:RemoveBillboard(target)
     end
     
-    function DeathCounterESP:Stop()
-        if not self.Enabled then return end
-        
-        self.Enabled = false
-        
-        for target, _ in pairs(self.Billboards) do
-            self:RemoveBillboard(target)
-        end
-        
-        for _, conn in ipairs(self.Connections) do
-            conn:Disconnect()
-        end
-        self.Connections = {}
-        self.State = {}
-        self.Billboards = {}
+    for _, conn in ipairs(self.Connections) do
+        conn:Disconnect()
     end
-    
-    local deathCounterESPToggle = ESPTab:Toggle({
-        Title = "Death Counter ESP",
-        Desc = "Shows enemy skill indicators above their heads\n💢 = Death Counter\n💥 = Ultimate",
-        Value = ConfigManager:Get("DeathCounterESPEnabled"),
-        Callback = function(state)
-            ConfigManager:Set("DeathCounterESPEnabled", state)
-            if state then
-                DeathCounterESP:Start()
-                WindUI:Notify({
-                    Title = "Death Counter ESP",
-                    Content = "Death Counter ESP activated",
-                    Duration = 2,
-                    Icon = "skull"
-                })
-            else
-                DeathCounterESP:Stop()
-                WindUI:Notify({
-                    Title = "Death Counter ESP",
-                    Content = "Death Counter ESP deactivated",
-                    Duration = 2,
-                    Icon = "skull-off"
-                })
-            end
+    self.Connections = {}
+    self.State = {}
+    self.Billboards = {}
+end
+
+local deathCounterESPToggle = ESPTab:Toggle({
+    Title = "Death Counter ESP",
+    Desc = "Shows enemy skill indicators above their heads\n💢 = Death Counter\n💥 = Ultimate",
+    Value = ConfigManager:Get("DeathCounterESPEnabled"),
+    Callback = function(state)
+        ConfigManager:Set("DeathCounterESPEnabled", state)
+        if state then
+            DeathCounterESP:Start()
+            WindUI:Notify({
+                Title = "Death Counter ESP",
+                Content = "Death Counter ESP activated",
+                Duration = 2,
+                Icon = "skull"
+            })
+        else
+            DeathCounterESP:Stop()
+            WindUI:Notify({
+                Title = "Death Counter ESP",
+                Content = "Death Counter ESP deactivated",
+                Duration = 2,
+                Icon = "skull-off"
+            })
         end
-    })
+    end
+})
+    
+
+
 
     -- Settings Tab Elements
     SettingsTab:Section({
