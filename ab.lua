@@ -466,37 +466,37 @@ function Camlock:CreateMobileButton()
     end)
     
     -- Better dragging system
-local isDragging = false
-local dragStart = nil
-local startPosition = nil
+    local isDragging = false
+    local dragStart = nil
+    local startPosition = nil
 
-button.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDragging = false
-        dragStart = input.Position
-        startPosition = button.Position
-        task.wait(0.1) -- Small delay to differentiate click from drag
-    end
-end)
-
-button.InputChanged:Connect(function(input)
-    if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        if dragStart and (input.Position - dragStart).Magnitude > 10 then -- 10 pixel threshold
-            isDragging = true
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = false
+            dragStart = input.Position
+            startPosition = button.Position
+            task.wait(0.1) -- Small delay to differentiate click from drag
         end
-    end
-end)
+    end)
 
-button.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        if not isDragging then
+    button.InputChanged:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            if dragStart and (input.Position - dragStart).Magnitude > 10 then -- 10 pixel threshold
+                isDragging = true
+            end
+        end
+    end)
+
+    button.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if not isDragging then
             -- It was a click, not a drag
-            self:Toggle()
+                self:Toggle()
+            end
+            isDragging = false
+            dragStart = nil
         end
-        isDragging = false
-        dragStart = nil
-    end
-end)
+    end)
 
 -- Smooth dragging
 RunService.RenderStepped:Connect(function()
