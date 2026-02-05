@@ -817,7 +817,7 @@ function TargetInfo:Start()
     
     -- Update target info in render loop
     self.Connection = RunService.RenderStepped:Connect(function()
-        if Camlock.Enabled and Camlock.Target then
+        if Camlock.Enabled and Camlock.Target and Camlock.Target.Character then
             self:UpdateInfo(Camlock.Target)
         elseif self.InfoFrame then
             local frame = self.InfoFrame:FindFirstChild("TargetInfoFrame")
@@ -854,7 +854,24 @@ end
     })
     
     local CombatTab = Window:Tab({
-        Title = "Combat",
+ function TargetInfo:Start()
+    if self.Enabled then return end
+    
+    self.Enabled = true
+    self:CreateInfoFrame()
+    
+    -- Update target info in render loop
+    self.Connection = RunService.RenderStepped:Connect(function()
+        if Camlock.Enabled and Camlock.Target and Camlock.Target.Character then
+            self:UpdateInfo(Camlock.Target)
+        elseif self.InfoFrame then
+            local frame = self.InfoFrame:FindFirstChild("TargetInfoFrame")
+            if frame then
+                frame.Visible = false
+            end
+        end
+    end)
+            end       Title = "Combat",
         Icon = "zap",
         Locked = false,
     })
