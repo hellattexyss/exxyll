@@ -135,13 +135,13 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     })
 
     Window:CreateTopbarButton("theme-switcher", "youtube", function()
-    local link = "https://www.youtube.com/@waspire"
+        local link = "https://www.youtube.com/@waspire"
     -- try to copy to clipboard (requires executor that exposes setclipboard)
-    if setclipboard then
-        pcall(function()
-            setclipboard(link)
-        end)
-    end
+        if setclipboard then
+            pcall(function()
+                setclipboard(link)
+            end)
+        end
     -- notify the user (uses the exact notification you requested)
     WindUI:Notify({
         Title = "Youtube Channel link has been copied!",
@@ -149,16 +149,16 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         Icon = "youtube",
         Duration = 3
     })
-end, 990)
+   end, 990)
 
     Window:CreateTopbarButton("theme-switcher", "discord", function()
-    local link = "https://discord.gg/HGpNBG4TAD"
+        local link = "https://discord.gg/HGpNBG4TAD"
     -- try to copy to clipboard (requires executor that exposes setclipboard)
-    if setclipboard then
-        pcall(function()
-            setclipboard(link)
-        end)
-    end
+        if setclipboard then
+            pcall(function()
+                setclipboard(link)
+            end)
+        end
     -- notify the user (uses the exact notification you requested)
     WindUI:Notify({
         Title = "Discord link has been copied!",
@@ -166,7 +166,7 @@ end, 990)
         Icon = "discord",
         Duration = 3
     })
-end, 990)
+    end, 990)
     
     Window:EditOpenButton({
         Title = "Open Combat UI - v1.0",
