@@ -777,8 +777,8 @@ function Camlock:SetupKeybind()
     end
 -- Snippet 4/5: UI Setup and Systems
     local InfoTab = Window:Tab({
-        Title = "Information",
-        Icon = "home",
+        Title = "Read Me",
+        Icon = "book",
         Locked = false,
     })
     
