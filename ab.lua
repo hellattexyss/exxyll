@@ -133,6 +133,40 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         BorderColor = Color3.fromHex("#DC143C"),
         Radius = 10
     })
+
+    Window:CreateTopbarButton("youtube", function()
+    local link = "https://www.youtube.com/@waspire"
+    -- try to copy to clipboard (requires executor that exposes setclipboard)
+    if setclipboard then
+        pcall(function()
+            setclipboard(link)
+        end)
+    end
+    -- notify the user (uses the exact notification you requested)
+    WindUI:Notify({
+        Title = "Youtube Channel link has been copied!",
+        Content = "Please Subscribe!",
+        Icon = "youtube",
+        Duration = 3
+    })
+end, 990)
+
+    Window:CreateTopbarButton("discord", function()
+    local link = "https://discord.gg/HGpNBG4TAD"
+    -- try to copy to clipboard (requires executor that exposes setclipboard)
+    if setclipboard then
+        pcall(function()
+            setclipboard(link)
+        end)
+    end
+    -- notify the user (uses the exact notification you requested)
+    WindUI:Notify({
+        Title = "Discord link has been copied!",
+        Content = "Please join our discord!",
+        Icon = "geist:logo-discord",
+        Duration = 3
+    })
+end, 990)
     
     Window:EditOpenButton({
         Title = "Open Combat UI - v1.0",
