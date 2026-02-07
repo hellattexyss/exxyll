@@ -813,6 +813,24 @@ function Camlock:SetupKeybind()
     })
 
     -- Info Tab Content
+    -- Simple changelog display like the screenshot
+    InfoTab:Section({
+        Title = "Version Information",
+        Desc = "Current: v1.0 | Status: Premium"
+    })
+
+    InfoTab:Paragraph({
+        Title = "Good Afternoon, " .. game.Players.LocalPlayer.Name .. "!",
+        Desc = "Welcome to Waspire Combat UI\n\n📋 Latest Changes:\n• Fixed Auto Block timing\n• Added M1 After Block range slider\n• Improved ESP performance\n• Mobile camlock button fixes\n\n🆕 Coming Soon:\n• Advanced Aim Assist\n• Custom Themes"
+    })
+
+    InfoTab:Image({
+        Image = "rbxassetid://122251684068515", -- Your script icon
+        Size = UDim2.fromOffset(60, 60),
+        CornerRadius = UDim.new(0.2, 0)
+    })
+    
+    
     InfoTab:Section({
         Title = "Live Server Statistics",
         Desc = "Real-time game server information"
