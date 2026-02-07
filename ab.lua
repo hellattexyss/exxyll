@@ -127,7 +127,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     })
     
     Window:Tag({
-        Title = "Premium",
+        Title = "Working!",
         Icon = "star",
         Color = Color3.fromHex("#000000"),
         BorderColor = Color3.fromHex("#DC143C"),
