@@ -814,6 +814,13 @@ function Camlock:SetupKeybind()
 
     -- Info Tab Content
     -- Simple changelog display like the screenshot
+    
+    InfoTab:Image({
+        Image = "rbxassetid://100810111630142", -- Your script icon
+        Size = UDim2.fromOffset(60, 60),
+        CornerRadius = UDim.new(0.2, 0)
+    })
+    
     InfoTab:Section({
         Title = "Version Information",
         Desc = "Current: v1.0 — Status: Working"
@@ -821,13 +828,7 @@ function Camlock:SetupKeybind()
 
     InfoTab:Paragraph({
         Title = "Greetings, " .. game.Players.LocalPlayer.Name .. "!",
-        Desc = "Welcome to Waspire Combat UI!\n\n📋 Latest Changes (07/02/26):\n• Added AutoBlock System\n• Added Camlock System\n• Added several ESP features!\n• Added a lot of stuff to Utility tab\n\n😝 Coming Soon:\n• Side Dash Assist (Hook Dash)\n• All sorts of techs! (gonna be fire)"
-    })
-
-    InfoTab:Image({
-        Image = "rbxassetid://100810111630142", -- Your script icon
-        Size = UDim2.fromOffset(60, 60),
-        CornerRadius = UDim.new(0.2, 0)
+        Desc = "Welcome to Waspire Combat UI!\n\n📋 Latest Changes (07/02/26):\n\n• Added AutoBlock System\n• Added Camlock System\n• Added several ESP features!\n• Added a lot of stuff to Utility tab\n\n🌟 Coming Soon:\n\n• Side Dash Assist (Hook Dash)\n• All sorts of techs! (gonna be fire)"
     })
     
     
