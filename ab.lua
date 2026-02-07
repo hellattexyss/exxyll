@@ -134,7 +134,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         Radius = 10
     })
 
-    Window:CreateTopbarButton("youtube", function()
+    Window:CreateTopbarButton("theme-switcher", "youtube", function()
     local link = "https://www.youtube.com/@waspire"
     -- try to copy to clipboard (requires executor that exposes setclipboard)
     if setclipboard then
@@ -151,7 +151,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     })
 end, 990)
 
-    Window:CreateTopbarButton("discord", function()
+    Window:CreateTopbarButton("theme-switcher", "discord", function()
     local link = "https://discord.gg/HGpNBG4TAD"
     -- try to copy to clipboard (requires executor that exposes setclipboard)
     if setclipboard then
