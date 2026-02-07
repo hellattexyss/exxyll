@@ -134,7 +134,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         Radius = 10
     })
 
-    Window:CreateTopbarButton("theme-switcher", "youtube", function()
+    Window:CreateTopbarButton("youtube", function()
         local link = "https://www.youtube.com/@waspire"
     -- try to copy to clipboard (requires executor that exposes setclipboard)
         if setclipboard then
@@ -151,7 +151,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     })
    end, 990)
 
-    Window:CreateTopbarButton("theme-switcher", "book", function()
+    Window:CreateTopbarButton("book", function()
         local link = "https://discord.gg/HGpNBG4TAD"
     -- try to copy to clipboard (requires executor that exposes setclipboard)
         if setclipboard then
@@ -162,7 +162,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     -- notify the user (uses the exact notification you requested)
     WindUI:Notify({
         Title = "Discord link has been copied!",
-        Content = "Please join our discord!",
+        Content = "Please join our discord for help.",
         Icon = "book",
         Duration = 3
     })
