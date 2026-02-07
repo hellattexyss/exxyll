@@ -163,7 +163,7 @@ end, 990)
     WindUI:Notify({
         Title = "Discord link has been copied!",
         Content = "Please join our discord!",
-        Icon = "geist:logo-discord",
+        Icon = "discord",
         Duration = 3
     })
 end, 990)
