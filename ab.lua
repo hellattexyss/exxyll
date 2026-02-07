@@ -820,8 +820,8 @@ function Camlock:SetupKeybind()
     })
 
     InfoTab:Paragraph({
-        Title = "Good Afternoon, " .. game.Players.LocalPlayer.Name .. "!",
-        Desc = "Welcome to Waspire Combat UI\n\n📋 Latest Changes:\n• Fixed Auto Block timing\n• Added M1 After Block range slider\n• Improved ESP performance\n• Mobile camlock button fixes\n\n😝 Coming Soon:\n• Advanced Aim Assist\n• Custom Themes"
+        Title = "Greetings, " .. game.Players.LocalPlayer.Name .. "!",
+        Desc = "Welcome to Waspire Combat UI!\n\n📋 Latest Changes (07/02/26):\n• Added AutoBlock System\n• Added Camlock System\n• Added several ESP features!\n• Added a lot of stuff to Utility tab\n\n😝 Coming Soon:\n• Side Dash Assist (Hook Dash)\n• All sorts of techs! (gonna be fire)"
     })
 
     InfoTab:Image({
