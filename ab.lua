@@ -1,6 +1,6 @@
 -- Snippet 1/5: Configuration and Setup
 if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceId == 131048399685555 then
-    local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+    local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/orialdev/WindUI-Forked-by-orialdev/main/WindUI%20Forked"))()
     
     local ConfigManager = {}
     local configFile = "WaspireCombatUI.json"
