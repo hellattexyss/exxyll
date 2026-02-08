@@ -2196,7 +2196,7 @@ local highPingToggle = ESPTab:Toggle({
     })         
 
     OthersTab:Section({
-        Title = "Instant Twisted (Coming Soon),
+        Title = "Instant Twisted (Coming Soon)",
         Desc = ""
     })
 
@@ -2210,11 +2210,6 @@ local highPingToggle = ESPTab:Toggle({
         Desc = "Join discord server for early access!"
     })
                 
-
-    OthersTab:Section({
-        Title = "Side Dash Assist (Coming Soon)",
-        Desc = "Join discord server for early access!"
-    })
 
     local copyButton = OthersTab:Button({
         Title = "Copy Discord Invite Link",
