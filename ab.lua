@@ -2386,7 +2386,7 @@ local highPingToggle = ESPTab:Toggle({
         Duration = 4,
     })
     
-    Window:SelectTab(1)
+    Window:SwitchTab(1)
     
 else
     wait(0.1)
