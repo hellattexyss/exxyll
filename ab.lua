@@ -2174,56 +2174,7 @@ local highPingToggle = ESPTab:Toggle({
             for key, value in pairs(defaultConfig) do
                 ConfigManager:Set(key, value)
             end
-
-    OthersTab:Section({
-        Title = "Side Dash Assist (Coming Soon)",
-        Desc = ""
-    })
-
-    OthersTab:Section({
-        Title = "Instant Lethal Dash (Coming Soon)",
-        Desc = ""
-    })           
-
-    OthersTab:Section({
-        Title = "Loopdash (Coming Soon)",
-        Desc = ""
-    })
-
-    OthersTab:Section({
-        Title = "Wasp Dash (Coming Soon)",
-        Desc = ""
-    })         
-
-    OthersTab:Section({
-        Title = "Instant Twisted (Coming Soon)",
-        Desc = ""
-    })
-
-    OthersTab:Section({
-        Title = "50+ Movesets! (Coming Soon)",
-        Desc = ""
-    })
-
-    OthersTab:Section({
-        Title = "30+ More Techs!",
-        Desc = "Join discord server for early access!"
-    })
-                
-
-    local copyButton = OthersTab:Button({
-        Title = "Copy Discord Invite Link",
-        Desc = "If you need help, or early access to our scripts. Join!",
-        Callback = function()
-            setclipboard("https://discord.gg/H2bURQxq3T")
-            WindUI:Notify({
-                Title = "Discord",
-                Content = "Discord link copied to clipboard!",
-                Duration = 2,
-                Icon = "message-circle"
-            })
-        end
-    })            
+            
             autoBlockToggle:SetValue(defaultConfig.AutoBlockEnabled)
             m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled)
             closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange)
@@ -2310,7 +2261,57 @@ local highPingToggle = ESPTab:Toggle({
             })
         end
     })
-    
+
+
+    OthersTab:Section({
+        Title = "Side Dash Assist (Coming Soon)",
+        Desc = ""
+    })
+
+    OthersTab:Section({
+        Title = "Instant Lethal Dash (Coming Soon)",
+        Desc = ""
+    })           
+
+    OthersTab:Section({
+        Title = "Loopdash (Coming Soon)",
+        Desc = ""
+    })
+
+    OthersTab:Section({
+        Title = "Wasp Dash (Coming Soon)",
+        Desc = ""
+    })         
+
+    OthersTab:Section({
+        Title = "Instant Twisted (Coming Soon)",
+        Desc = ""
+    })
+
+    OthersTab:Section({
+        Title = "50+ Movesets! (Coming Soon)",
+        Desc = ""
+    })
+
+    OthersTab:Section({
+        Title = "30+ More Techs!",
+        Desc = "Join discord server for early access!"
+    })
+                
+
+    OthersTab:Button({
+        Title = "Copy Discord Invite Link",
+        Desc = "If you need help, or early access to our scripts. Join!",
+        Callback = function()
+            setclipboard("https://discord.gg/H2bURQxq3T")
+            WindUI:Notify({
+                Title = "Discord",
+                Content = "Discord link copied to clipboard!",
+                Duration = 2,
+                Icon = "message-circle"
+            })
+        end
+    })
     
     -- Initialize keybind
     Camlock:SetupKeybind()
