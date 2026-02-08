@@ -151,7 +151,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     })
    end, 990)
 
-   Window:CreateTopbarButton("theme-switcher", "book", function()
+   Window:CreateTopbarButton("theme-switcher", "chat", function()
         local link = "https://discord.gg/HGpNBG4TAD"
     -- try to copy to clipboard (requires executor that exposes setclipboard)
         if setclipboard then
@@ -163,7 +163,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     WindUI:Notify({
         Title = "Discord Server link has been copied!",
         Content = "Please join for help/assistance!",
-        Icon = "book",
+        Icon = "chat",
         Duration = 3
     })
    end, 990)
@@ -864,75 +864,19 @@ function Camlock:SetupKeybind()
         Title = "Greetings, " .. game.Players.LocalPlayer.Name .. "!",
         Desc = "Welcome to Waspire Combat UI!\n\n📋 Latest Changes (07/02/26):\n\n• Added AutoBlock System\n• Added Camlock System\n• Added several ESP features!\n• Added a lot of stuff to Utility tab\n\n🌟 Coming Soon:\n\n• Side Dash Assist (Hook Dash)\n• All sorts of techs! (gonna be fire)"
     })
-    
-    
-    InfoTab:Section({
-        Title = "Live Server Statistics",
-        Desc = "Real-time game server information"
-    })
-
-    local serverStatsLabel = InfoTab:Paragraph({
-        Title = "Server Status",
-        Desc = "Loading server stats..."
-    })
-
-    InfoTab:Button({
-        Title = "Copy Server Info",
-        Desc = "Copy current server statistics to clipboard",
-        Callback = function()
-            local totalPlayers = #Players:GetPlayers()
-            local serverSize = game.PlaceId == 10449761463 and 20 or 15
-            local text = string.format("Server: %d/%d players online", totalPlayers, serverSize)
-            setclipboard(text)
-            WindUI:Notify({
-                Title = "Server Info",
-                Content = "Server information copied to clipboard!",
-                Duration = 2,
-                Icon = "clipboard"
-            })
-        end
-    })
-    InfoTab:Button({
-    Title = "Refresh Stats",
-    Desc = "Manually refresh server and Discord statistics",
-    Callback = function()
-        -- Update server stats
-        local totalPlayers = #Players:GetPlayers()
-        local serverSize = game.PlaceId == 10449761463 and 20 or 15
-        local serverText = string.format("Players: %d/%d\nStatus: LIVE", totalPlayers, serverSize)
         
-        if serverStatsLabel and typeof(serverStatsLabel.SetDescription) == "function" then
-            serverStatsLabel:SetDescription(serverText)
-        end
-        
-        -- Update Discord stats
-        local discordData = getDiscordStats()
-        local discordText = string.format("Members: %d+\nOnline: %d+", discordData.members, discordData.online)
-        
-        if discordStatsLabel and typeof(discordStatsLabel.SetDescription) == "function" then
-            discordStatsLabel:SetDescription(discordText)
-        end
-        
-        WindUI:Notify({
-            Title = "Stats Refreshed",
-            Content = "Server statistics updated",
-            Duration = 2,
-            Icon = "refresh-cw"
-        })
-    end
-})
     InfoTab:Section({
         Title = "Discord Community",
         Desc = "Our Discord server statistics"
     })
 
     local discordStatsLabel = InfoTab:Paragraph({
-        Title = "Discord Stats",
+        Title = "Join our Discord server for help/assistance!",
         Desc = "Members: 32100\nOnline: 4000"
     })
 
     InfoTab:Button({
-        Title = "Copy Discord Link",
+        Title = "Copy Invite Link",
         Desc = "Copy Discord invite link to clipboard",
         Callback = function()
             setclipboard("https://discord.gg/H2bURQxq3T")
@@ -951,8 +895,8 @@ function Camlock:SetupKeybind()
     })
 
     local youtubeStatsLabel = InfoTab:Paragraph({
-        Title = "YouTube Stats",
-        Desc = "Subscribers: 25,600"
+        Title = "Subscribe to Waspire for more!",
+        Desc = "Subscribers: 26,000"
     })
 
     InfoTab:Button({
@@ -969,60 +913,6 @@ function Camlock:SetupKeybind()
         end
     })
 
-    InfoTab:Section({
-        Title = "Script Information",
-        Desc = "Script details and features"
-    })
-
-    InfoTab:Paragraph({
-        Title = "Script Details",
-        Desc = "Version: v1.0\nCreator: Waspire\nGame: The Strongest Battlegrounds\nStatus: Premium"
-    })
-
-    InfoTab:Paragraph({
-        Title = "Main Features",
-        Desc = "Auto Block System\nCamlock with Mobile Support\nCounter ESP Detection\nDeath Counter ESP\nAuto Toxic Messages\nPing Display ESP\nBlock ESP Indicators\nHigh Ping Warning"
-    })
-
-    -- Replace the entire fetchDiscordStats function and update loop with this:
-
-local function getDiscordStats()
-    -- Since Roblox HTTP may be restricted, use fallback values
-    -- You can manually update these occasionally
-    return {
-        members = 32100,  -- Your approximate member count
-        online = 4000     -- Your approximate online count
-    }
-end
-
--- Update statistics in real-time with SIMPLIFIED logic
-task.spawn(function()
-    while task.wait(3) do
-        pcall(function()
-            -- Update server stats
-            local totalPlayers = #Players:GetPlayers()
-            local serverSize = game.PlaceId == 10449761463 and 20 or 15
-            local serverText = string.format("Players: %d/%d\nStatus: LIVE", totalPlayers, serverSize)
-            
-            if serverStatsLabel and typeof(serverStatsLabel.SetDescription) == "function" then
-                serverStatsLabel:SetDescription(serverText)
-            end
-            
-            -- Update Discord stats (cached values)
-            local discordData = getDiscordStats()
-            local discordText = string.format("Members: %d+\nOnline: %d+", discordData.members, discordData.online)
-            
-            if discordStatsLabel and typeof(discordStatsLabel.SetDescription) == "function" then
-                discordStatsLabel:SetDescription(discordText)
-            end
-            
-            -- Update YouTube stats
-            if youtubeStatsLabel and typeof(youtubeStatsLabel.SetDescription) == "function" then
-                youtubeStatsLabel:SetDescription("Subscribers: 25,600")
-            end
-        end)
-    end
-end)
         
     -- Fixed Auto Toxic System
     local AutoToxic = {
