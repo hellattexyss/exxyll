@@ -2190,22 +2190,22 @@ local highPingToggle = ESPTab:Toggle({
         Desc = ""
     })
 
-    InfoTab:Section({
+    OthersTab:Section({
         Title = "Wasp Dash (Coming Soon)",
         Desc = ""
     })         
 
-    InfoTab:Section({
+    OthersTab:Section({
         Title = "Instant Twisted (Coming Soon),
         Desc = ""
     })
 
-    InfoTab:Section({
+    OthersTab:Section({
         Title = "50+ Movesets! (Coming Soon)",
         Desc = ""
     })
 
-    InfoTab:Section({
+    OthersTab:Section({
         Title = "30+ More Techs!",
         Desc = "Join discord server for early access!"
     })
