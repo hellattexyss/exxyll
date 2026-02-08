@@ -769,6 +769,16 @@ function Camlock:CreateMobileButton()
     screenGui.Parent = game:GetService("CoreGui")
 end
 
+-- Add this function to the Camlock table in Snippet 3/5, after the CreateMobileButton function
+
+function Camlock:UpdateMobileButtonText()
+    if self.MobileButton and self.MobileButton:FindFirstChild("CamlockButton") then
+        local button = self.MobileButton.CamlockButton
+        button.Text = "CAMLOCK " .. self.ButtonState
+        button.BackgroundColor3 = self.ButtonState == "ON" and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(0, 0, 0)
+    end
+end
+ 
 -- Also update RemoveMobileButton to clean up mobile connections:
 function Camlock:RemoveMobileButton()
     if self.MobileButton then
@@ -1634,15 +1644,17 @@ end
     })
 
     -- Fixed High Ping Warning System
-    -- REPLACE the entire HighPingWarning system with this:
+    -- REPLACE the entire HighPingWarning system with thi
+-- High Ping Warning System - FIXED VERSION
 local HighPingWarning = {
     Enabled = false,
-    Threshold = 105,  -- Changed from 150 to 105
+    Threshold = 105,
     WarningFrame = nil,
     Blinking = false,
     Connection = nil,
     LastPingCheck = 0,
-    PingCheckInterval = 1  -- Check every second
+    PingCheckInterval = 2, -- Increased to 2 seconds to reduce performance impact
+    BlinkConnection = nil
 }
 
 function HighPingWarning:CreateWarningFrame()
@@ -1661,6 +1673,7 @@ function HighPingWarning:CreateWarningFrame()
     frame.Position = UDim2.new(0.5, -150, 0.8, 0)
     frame.BorderSizePixel = 2
     frame.BorderColor3 = Color3.fromRGB(255, 50, 50)
+    frame.Visible = false
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 8)
@@ -1691,7 +1704,7 @@ function HighPingWarning:CreateWarningFrame()
     
     local subText = Instance.new("TextLabel")
     subText.Name = "SubText"
-    subText.Text = "Ping is too high. Autoblock may not work."
+    subText.Text = "Ping too high! Autoblock might not work properly."
     subText.TextSize = 14
     subText.TextColor3 = Color3.fromRGB(200, 200, 200)
     subText.BackgroundTransparency = 1
@@ -1703,9 +1716,54 @@ function HighPingWarning:CreateWarningFrame()
     
     screenGui.Parent = game:GetService("CoreGui")
     self.WarningFrame = screenGui
+end
+
+function HighPingWarning:StartBlinking()
+    if self.Blinking or not self.WarningFrame then return end
     
-    -- Start hidden
-    frame.Visible = false
+    self.Blinking = true
+    local frame = self.WarningFrame:FindFirstChild("WarningFrame")
+    if not frame then return end
+    
+    frame.Visible = true
+    
+    if self.BlinkConnection then
+        self.BlinkConnection:Disconnect()
+    end
+    
+    self.BlinkConnection = RunService.Heartbeat:Connect(function()
+        if not self.Blinking or not frame then
+            if self.BlinkConnection then
+                self.BlinkConnection:Disconnect()
+                self.BlinkConnection = nil
+            end
+            return
+        end
+        
+        local alpha = 0.3 + (math.sin(tick() * 5) * 0.2) -- Subtle blink
+        frame.BackgroundTransparency = alpha
+        frame.BorderColor3 = Color3.fromRGB(
+            255, 
+            50 + math.sin(tick() * 5) * 20, 
+            50 + math.sin(tick() * 5) * 20
+        )
+    end)
+end
+
+function HighPingWarning:StopBlinking()
+    if self.BlinkConnection then
+        self.BlinkConnection:Disconnect()
+        self.BlinkConnection = nil
+    end
+    
+    self.Blinking = false
+    
+    if self.WarningFrame and self.WarningFrame:FindFirstChild("WarningFrame") then
+        local frame = self.WarningFrame.WarningFrame
+        frame.Visible = false
+        frame.BackgroundTransparency = 0.3
+        frame.BorderColor3 = Color3.fromRGB(255, 50, 50)
+    end
 end
 
 function HighPingWarning:CheckPing()
@@ -1718,10 +1776,19 @@ function HighPingWarning:CheckPing()
     
     self.LastPingCheck = currentTime
     
-    -- Get player ping
+    -- Get player ping using proper method for TSB
     local success, ping = pcall(function()
-        return LocalPlayer:GetNetworkPing() * 1000  -- Convert to milliseconds
+        local stats = game:GetService("Stats")
+        local network = stats.Network
+        return network.ServerStatsItem["Data Ping"]:GetValue() or 0
     end)
+    
+    if not success then
+        -- Fallback method
+        success, ping = pcall(function()
+            return LocalPlayer:GetNetworkPing() * 1000
+        end)
+    end
     
     if not success then
         ping = 0
@@ -1731,22 +1798,19 @@ function HighPingWarning:CheckPing()
     
     if pingValue >= self.Threshold then
         if not self.Blinking then
-            self.Blinking = true
+            self:StartBlinking()
+            
             if self.WarningFrame and self.WarningFrame:FindFirstChild("WarningFrame") then
                 local frame = self.WarningFrame.WarningFrame
                 local warningText = frame:FindFirstChild("WarningText")
                 if warningText then
                     warningText.Text = "HIGH PING (" .. pingValue .. "ms)"
                 end
-                frame.Visible = true
             end
         end
     else
         if self.Blinking then
-            self.Blinking = false
-            if self.WarningFrame and self.WarningFrame:FindFirstChild("WarningFrame") then
-                self.WarningFrame.WarningFrame.Visible = false
-            end
+            self:StopBlinking()
         end
     end
 end
@@ -1777,7 +1841,7 @@ function HighPingWarning:Stop()
     if not self.Enabled then return end
     
     self.Enabled = false
-    self.Blinking = false
+    self:StopBlinking()
     
     if self.Connection then
         self.Connection:Disconnect()
@@ -1797,7 +1861,7 @@ function HighPingWarning:Stop()
     })
 end
 
--- Update the toggle in ESPTab to set threshold to 105
+-- Update the toggle in ESPTab
 local highPingToggle = ESPTab:Toggle({
     Title = "High Ping Warning",
     Desc = "Shows warning when ping is too high (105+ ms)",
@@ -1811,190 +1875,195 @@ local highPingToggle = ESPTab:Toggle({
         end
     end
 })
-
     -- Block ESP System
-    local BlockESP = {
-        Enabled = false,
-        BlockAnimationId = "rbxassetid://10470389827",
-        BlockImageId = "rbxassetid://13180179085",
-        Indicators = {},
-        Connections = {}
-    }
+    -- Block ESP System - FIXED VERSION
+local BlockESP = {
+    Enabled = false,
+    BlockAnimationId = "rbxassetid://10470389827", -- Correct TSB block animation
+    BlockImageId = "rbxassetid://13180179085",
+    Indicators = {},
+    Connections = {}
+}
+
+function BlockESP:CreateBlockIndicator(character)
+    if self.Indicators[character] then return self.Indicators[character] end
     
-    function BlockESP:CreateBlockIndicator(character)
-        if self.Indicators[character] then return self.Indicators[character] end
-        
-        local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
-        if not torso then return nil end
-        
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "BlockIndicator"
-        billboard.Adornee = torso
-        billboard.Size = UDim2.new(4, 0, 4, 0)
-        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-        billboard.AlwaysOnTop = true
-        billboard.MaxDistance = 200
-        billboard.Parent = character
-        
-        local imageLabel = Instance.new("ImageLabel")
-        imageLabel.Name = "BlockIcon"
-        imageLabel.Size = UDim2.new(1, 0, 1, 0)
-        imageLabel.BackgroundTransparency = 1
-        imageLabel.Image = self.BlockImageId
-        imageLabel.ImageTransparency = 0.4
-        imageLabel.Parent = billboard
-        
-        task.spawn(function()
-            while billboard and billboard.Parent and self.Enabled do
-                for i = 0, 1, 0.1 do
-                    if not billboard or not billboard.Parent or not self.Enabled then break end
-                    local pulse = 0.4 + (math.sin(i * math.pi) * 0.3)
-                    imageLabel.ImageTransparency = pulse
-                    task.wait(0.05)
-                end
+    -- Use HumanoidRootPart instead of Torso for better compatibility
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return nil end
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "BlockIndicator"
+    billboard.Adornee = rootPart
+    billboard.Size = UDim2.new(0, 30, 0, 30) -- Smaller size
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0) -- Above head
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = 150 -- Reduced max distance
+    billboard.Parent = character
+    
+    local imageLabel = Instance.new("ImageLabel")
+    imageLabel.Name = "BlockIcon"
+    imageLabel.Size = UDim2.new(1, 0, 1, 0)
+    imageLabel.BackgroundTransparency = 1
+    imageLabel.Image = self.BlockImageId
+    imageLabel.ImageTransparency = 0.6 -- More transparent
+    imageLabel.Parent = billboard
+    
+    -- Subtle pulsing effect
+    task.spawn(function()
+        while billboard and billboard.Parent and self.Enabled do
+            for i = 0, 1, 0.05 do
+                if not billboard or not billboard.Parent or not self.Enabled then break end
+                local pulse = 0.6 + (math.sin(i * math.pi) * 0.2) -- Subtler pulse
+                imageLabel.ImageTransparency = pulse
+                task.wait(0.03)
             end
-        end)
-        
-        self.Indicators[character] = billboard
-        return billboard
-    end
-    
-    function BlockESP:RemoveBlockIndicator(character)
-        if self.Indicators[character] then
-            self.Indicators[character]:Destroy()
-            self.Indicators[character] = nil
         end
-    end
+    end)
     
-    function BlockESP:SetupPlayer(player)
-        if player == LocalPlayer then return end
+    self.Indicators[character] = billboard
+    return billboard
+end
+
+function BlockESP:RemoveBlockIndicator(character)
+    if self.Indicators[character] then
+        self.Indicators[character]:Destroy()
+        self.Indicators[character] = nil
+    end
+end
+
+function BlockESP:SetupPlayer(player)
+    if player == LocalPlayer then return end
+    
+    local function setupCharacter(character)
+        if not character then return end
         
-        local charAddedConn = player.CharacterAdded:Connect(function(character)
-            task.wait(1)
+        local humanoid = character:WaitForChild("Humanoid", 3)
+        if not humanoid then return end
+        
+        local function handleAnimation(track)
+            if not self.Enabled then return end
             
-            local humanoid = character:WaitForChild("Humanoid", 3)
-            if not humanoid then return end
-            
-            local animationConn = humanoid.AnimationPlayed:Connect(function(track)
-                if not self.Enabled then return end
+            if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                local billboard = self:CreateBlockIndicator(character)
                 
-                if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
-                    local billboard = self:CreateBlockIndicator(character)
-                    
-                    track.Stopped:Connect(function()
-                        if billboard and billboard.Parent then
-                            self:RemoveBlockIndicator(character)
-                        end
-                    end)
-                    
-                    humanoid.Died:Connect(function()
-                        self:RemoveBlockIndicator(character)
-                    end)
-                end
-            end)
-            
-            table.insert(self.Connections, animationConn)
-            
-            for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-                if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
-                    self:CreateBlockIndicator(character)
-                end
-            end
-        end)
-        
-        table.insert(self.Connections, charAddedConn)
-        
-        if player.Character then
-            local humanoid = player.Character:FindFirstChild("Humanoid")
-            if humanoid then
-                local animationConn = humanoid.AnimationPlayed:Connect(function(track)
-                    if not self.Enabled then return end
-                    
-                    if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
-                        local billboard = self:CreateBlockIndicator(player.Character)
-                        
-                        if billboard then
-                            track.Stopped:Connect(function()
-                                self:RemoveBlockIndicator(player.Character)
-                            end)
-                        end
+                -- Remove when animation stops
+                local stoppedConnection
+                stoppedConnection = track.Stopped:Connect(function()
+                    self:RemoveBlockIndicator(character)
+                    if stoppedConnection then
+                        stoppedConnection:Disconnect()
                     end
                 end)
                 
-                table.insert(self.Connections, animationConn)
-                
-                for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-                    if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
-                        self:CreateBlockIndicator(player.Character)
+                -- Remove when character dies
+                local diedConnection
+                diedConnection = humanoid.Died:Connect(function()
+                    self:RemoveBlockIndicator(character)
+                    if diedConnection then
+                        diedConnection:Disconnect()
                     end
-                end
+                end)
             end
         end
-    end
-    
-    function BlockESP:Start()
-        if self.Enabled then return end
         
-        self.Enabled = true
-        
-        for _, player in ipairs(Players:GetPlayers()) do
-            self:SetupPlayer(player)
+        -- Check for existing block animations
+        for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+            if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+                self:CreateBlockIndicator(character)
+            end
         end
         
-        local playerAddedConn = Players.PlayerAdded:Connect(function(player)
-            self:SetupPlayer(player)
+        -- Listen for new animations
+        local animationConn = humanoid.AnimationPlayed:Connect(function(track)
+            handleAnimation(track)
         end)
         
-        table.insert(self.Connections, playerAddedConn)
-        
-        WindUI:Notify({
-            Title = "Opponent Block ESP",
-            Content = "Block indicator ESP activated",
-            Duration = 2,
-            Icon = "shield"
-        })
+        table.insert(self.Connections, animationConn)
     end
     
-    function BlockESP:Stop()
-        if not self.Enabled then return end
-        
-        self.Enabled = false
-        
-        for character, indicator in pairs(self.Indicators) do
-            if indicator and indicator.Parent then
-                indicator:Destroy()
-            end
-        end
-        self.Indicators = {}
-        
-        for _, conn in ipairs(self.Connections) do
-            if conn then
-                pcall(function() conn:Disconnect() end)
-            end
-        end
-        self.Connections = {}
-        
-        WindUI:Notify({
-            Title = "Opponent Block ESP",
-            Content = "Block indicator ESP deactivated",
-            Duration = 2,
-            Icon = "shield-off"
-        })
+    -- Setup for existing character
+    if player.Character then
+        setupCharacter(player.Character)
     end
     
-    local blockESPToggle = ESPTab:Toggle({
+    -- Setup for future characters
+    local charAddedConn = player.CharacterAdded:Connect(function(character)
+        task.wait(1) -- Wait for character to fully load
+        setupCharacter(character)
+    end)
+    
+    table.insert(self.Connections, charAddedConn)
+end
+
+function BlockESP:Start()
+    if self.Enabled then return end
+    
+    self.Enabled = true
+    
+    -- Setup for all existing players
+    for _, player in ipairs(Players:GetPlayers()) do
+        self:SetupPlayer(player)
+    end
+    
+    -- Setup for new players
+    local playerAddedConn = Players.PlayerAdded:Connect(function(player)
+        self:SetupPlayer(player)
+    end)
+    
+    table.insert(self.Connections, playerAddedConn)
+    
+    WindUI:Notify({
         Title = "Opponent Block ESP",
-        Desc = "Shows indicator when enemies block.",
-        Value = ConfigManager:Get("BlockESPEnabled"),
-        Callback = function(state)
-            ConfigManager:Set("BlockESPEnabled", state)
-            if state then
-                BlockESP:Start()
-            else
-                BlockESP:Stop()
-            end
-        end
+        Content = "Block indicator ESP activated",
+        Duration = 2,
+        Icon = "shield"
     })
+end
+
+function BlockESP:Stop()
+    if not self.Enabled then return end
+    
+    self.Enabled = false
+    
+    -- Remove all indicators
+    for character, indicator in pairs(self.Indicators) do
+        if indicator and indicator.Parent then
+            indicator:Destroy()
+        end
+    end
+    self.Indicators = {}
+    
+    -- Disconnect all connections
+    for _, conn in ipairs(self.Connections) do
+        if conn then
+            pcall(function() conn:Disconnect() end)
+        end
+    end
+    self.Connections = {}
+    
+    WindUI:Notify({
+        Title = "Opponent Block ESP",
+        Content = "Block indicator ESP deactivated",
+        Duration = 2,
+        Icon = "shield-off"
+    })
+end
+
+local blockESPToggle = ESPTab:Toggle({
+    Title = "Opponent Block ESP",
+    Desc = "Shows indicator when enemies block.",
+    Value = ConfigManager:Get("BlockESPEnabled"),
+    Callback = function(state)
+        ConfigManager:Set("BlockESPEnabled", state)
+        if state then
+            BlockESP:Start()
+        else
+            BlockESP:Stop()
+        end
+    end
+})    
+
 
     -- Death Counter ESP System
     local DeathCounterESP = {
