@@ -846,6 +846,12 @@ function Camlock:SetupKeybind()
         Locked = false,
     })
 
+    local OthersTab = Window:Tab({
+        Title = "About",
+        Icon = "info",
+        Locked = false,
+    })
+
     -- Info Tab Content
     -- Simple changelog display like the screenshot
     
@@ -2256,28 +2262,6 @@ local highPingToggle = ESPTab:Toggle({
         end
     })
     
-    local testButton = SettingsTab:Button({
-        Title = "Test Auto Block",
-        Desc = "Manually test the auto block system",
-        Callback = function()
-            if not AutoBlock.Enabled then
-                WindUI:Notify({
-                    Title = "Test Failed",
-                    Content = "Please enable Auto Block first!",
-                    Duration = 3,
-                    Icon = "alert-triangle"
-                })
-                return
-            end
-            
-            WindUI:Notify({
-                Title = "Test Active",
-                Content = "Auto Block is active. Try attacking with an enemy character.",
-                Duration = 5,
-                Icon = "shield"
-            })
-        end
-    })
     
     -- Initialize keybind
     Camlock:SetupKeybind()
