@@ -2216,7 +2216,7 @@ local highPingToggle = ESPTab:Toggle({
         Desc = "Join discord server for early access!"
     })
 
-    OthersTab:Button({
+    local copyButton = OthersTab:Button({
         Title = "Copy Discord Invite Link",
         Desc = "If you need help, or early access to our scripts. Join!",
         Callback = function()
@@ -2228,9 +2228,7 @@ local highPingToggle = ESPTab:Toggle({
                 Icon = "message-circle"
             })
         end
-    })
-                
-
+    })            
             autoBlockToggle:SetValue(defaultConfig.AutoBlockEnabled)
             m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled)
             closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange)
