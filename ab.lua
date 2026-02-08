@@ -151,7 +151,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     })
    end, 990)
 
-   Window:CreateTopbarButton("theme-switcher", "chat", function()
+   Window:CreateTopbarButton("theme-switcher", "message-circle", function()
         local link = "https://discord.gg/HGpNBG4TAD"
     -- try to copy to clipboard (requires executor that exposes setclipboard)
         if setclipboard then
@@ -163,7 +163,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     WindUI:Notify({
         Title = "Discord Server link has been copied!",
         Content = "Please join for help/assistance!",
-        Icon = "chat",
+        Icon = "message-circle",
         Duration = 3
     })
    end, 990)
