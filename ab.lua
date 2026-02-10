@@ -1336,6 +1336,68 @@ end
             end
         end
     })
+    -- After the existing mobileCamlockToggle in CamlockTab:
+
+    local targetInfoToggle = CamlockTab:Toggle({
+        Title = "Target Info Display",
+        Desc = "Show target info (HP, Distance) when camlocked",
+        Value = ConfigManager:Get("CamlockTargetInfoEnabled"),
+        Callback = function(state)
+            ConfigManager:Set("CamlockTargetInfoEnabled", state)
+            Camlock.ShowTargetInfo = state
+        
+            if not state and Camlock.TargetDisplay then
+                Camlock:ClearTargetDisplay()
+            elseif state and Camlock.Enabled and Camlock.Target then
+                Camlock:CreateTargetDisplay()
+            end
+        
+            WindUI:Notify({
+                Title = "Target Info",
+                Content = state and "Enabled" or "Disabled",
+                Duration = 2,
+                Icon = "info"
+            })
+        end
+    })
+
+    local camlockNotificationsToggle = CamlockTab:Toggle({
+        Title = "Camlock Notifications",
+        Desc = "Show notifications when camlock is toggled",
+        Value = ConfigManager:Get("CamlockNotificationsEnabled"),
+        Callback = function(state)
+            ConfigManager:Set("CamlockNotificationsEnabled", state)
+            Camlock.ShowNotifications = state
+        
+            WindUI:Notify({
+                Title = "Camlock Notifications",
+                Content = state and "Enabled" or "Disabled",
+                Duration = 2,
+                Icon = "bell"
+            })
+        end
+    })
+
+    local predictionSlider = CamlockTab:Slider({
+        Title = "Camlock Prediction",
+        Desc = "Adjust camlock smoothness (Lower = Smoother)",
+        Value = {
+            Min = 0.1,
+            Max = 1.0,
+            Default = ConfigManager:Get("CamlockPrediction"),
+        },
+        Callback = function(value)
+            ConfigManager:Set("CamlockPrediction", tonumber(value))
+            Camlock.Prediction = tonumber(value)
+        
+            WindUI:Notify({
+                Title = "Camlock Prediction",
+                Content = "Prediction set to " .. string.format("%.1f", value),
+                Duration = 2,
+                Icon = "settings"
+            })
+        end
+    })
 -- Snippet 5/5: ESP Systems and Final Initialization
     -- ESP Tab Elements
     ESPTab:Section({
