@@ -373,12 +373,12 @@ local Camlock = {
     InputService = game:GetService("UserInputService"),
     LastClickTime = 0,
     ClickCooldown = 0.3,
-     -- ... existing properties ...
-    IsDragging = false,
-    DragStart = nil,
-    StartPosition = nil
+    Prediction = 0.5,  -- Default prediction value
+    ShowNotifications = true,  -- Default notification setting
+    ShowTargetInfo = true,  -- Default target info setting
+    -- ... existing properties ...
 }
-
+    
 function Camlock:FindClosestTarget()
     local camera = workspace.CurrentCamera
     local closest = nil
