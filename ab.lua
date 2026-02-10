@@ -1889,46 +1889,46 @@ local highPingToggle = ESPTab:Toggle({
 })
     -- Block ESP System
     -- Block ESP System - FIXED VERSION
+-- Block ESP System - FIXED AND WORKING VERSION
 local BlockESP = {
     Enabled = false,
-    BlockAnimationId = "rbxassetid://10470389827", -- Correct TSB block animation
-    BlockImageId = "rbxassetid://13180179085",
+    BlockAnimationId = "rbxassetid://10470389827", -- TSB Block Animation
     Indicators = {},
     Connections = {}
 }
 
 function BlockESP:CreateBlockIndicator(character)
-    if self.Indicators[character] then return self.Indicators[character] end
+    if self.Indicators[character] then return end
     
-    -- Use HumanoidRootPart instead of Torso for better compatibility
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return nil end
+    local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+    if not torso then return end
     
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "BlockIndicator"
-    billboard.Adornee = rootPart
-    billboard.Size = UDim2.new(0, 30, 0, 30) -- Smaller size
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0) -- Above head
+    billboard.Adornee = torso
+    billboard.Size = UDim2.new(2, 0, 2, 0)
+    billboard.StudsOffset = Vector3.new(0, 1, 0)
     billboard.AlwaysOnTop = true
-    billboard.MaxDistance = 150 -- Reduced max distance
-    billboard.Parent = character
+    billboard.MaxDistance = 200
+    billboard.Parent = torso
     
-    local imageLabel = Instance.new("ImageLabel")
-    imageLabel.Name = "BlockIcon"
-    imageLabel.Size = UDim2.new(1, 0, 1, 0)
-    imageLabel.BackgroundTransparency = 1
-    imageLabel.Image = self.BlockImageId
-    imageLabel.ImageTransparency = 0.6 -- More transparent
-    imageLabel.Parent = billboard
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "BlockEmoji"
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = "🛡️" -- Shield emoji
+    textLabel.TextSize = 24
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextColor3 = Color3.fromRGB(255, 50, 50) -- Red color
+    textLabel.Parent = billboard
     
-    -- Subtle pulsing effect
+    -- Color pulse effect
     task.spawn(function()
         while billboard and billboard.Parent and self.Enabled do
-            for i = 0, 1, 0.05 do
+            for n = 0, 1, 0.05 do
                 if not billboard or not billboard.Parent or not self.Enabled then break end
-                local pulse = 0.6 + (math.sin(i * math.pi) * 0.2) -- Subtler pulse
-                imageLabel.ImageTransparency = pulse
-                task.wait(0.03)
+                textLabel.TextColor3 = Color3.new(1, 0, 0):Lerp(Color3.new(0.5, 0, 0), math.sin(n * math.pi))
+                task.wait(0.1)
             end
         end
     end)
@@ -1953,45 +1953,32 @@ function BlockESP:SetupPlayer(player)
         local humanoid = character:WaitForChild("Humanoid", 3)
         if not humanoid then return end
         
-        local function handleAnimation(track)
+        -- Listen for block animation
+        local animationConn = humanoid.AnimationPlayed:Connect(function(track)
             if not self.Enabled then return end
             
             if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
                 local billboard = self:CreateBlockIndicator(character)
                 
                 -- Remove when animation stops
-                local stoppedConnection
-                stoppedConnection = track.Stopped:Connect(function()
+                local stoppedConn
+                stoppedConn = track.Stopped:Connect(function()
                     self:RemoveBlockIndicator(character)
-                    if stoppedConnection then
-                        stoppedConnection:Disconnect()
-                    end
-                end)
-                
-                -- Remove when character dies
-                local diedConnection
-                diedConnection = humanoid.Died:Connect(function()
-                    self:RemoveBlockIndicator(character)
-                    if diedConnection then
-                        diedConnection:Disconnect()
+                    if stoppedConn then
+                        stoppedConn:Disconnect()
                     end
                 end)
             end
-        end
-        
-        -- Check for existing block animations
-        for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-            if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
-                self:CreateBlockIndicator(character)
-            end
-        end
-        
-        -- Listen for new animations
-        local animationConn = humanoid.AnimationPlayed:Connect(function(track)
-            handleAnimation(track)
         end)
         
         table.insert(self.Connections, animationConn)
+        
+        -- Remove indicator when character dies
+        local diedConn = humanoid.Died:Connect(function()
+            self:RemoveBlockIndicator(character)
+        end)
+        
+        table.insert(self.Connections, diedConn)
     end
     
     -- Setup for existing character
@@ -2001,7 +1988,7 @@ function BlockESP:SetupPlayer(player)
     
     -- Setup for future characters
     local charAddedConn = player.CharacterAdded:Connect(function(character)
-        task.wait(1) -- Wait for character to fully load
+        task.wait(0.5) -- Wait for character to fully load
         setupCharacter(character)
     end)
     
@@ -2024,13 +2011,6 @@ function BlockESP:Start()
     end)
     
     table.insert(self.Connections, playerAddedConn)
-    
-    WindUI:Notify({
-        Title = "Opponent Block ESP",
-        Content = "Block indicator ESP activated",
-        Duration = 2,
-        Icon = "shield"
-    })
 end
 
 function BlockESP:Stop()
@@ -2053,18 +2033,11 @@ function BlockESP:Stop()
         end
     end
     self.Connections = {}
-    
-    WindUI:Notify({
-        Title = "Opponent Block ESP",
-        Content = "Block indicator ESP deactivated",
-        Duration = 2,
-        Icon = "shield-off"
-    })
 end
 
 local blockESPToggle = ESPTab:Toggle({
     Title = "Opponent Block ESP",
-    Desc = "Shows indicator when enemies block.",
+    Desc = "Shows shield icon (🛡️) when enemies block",
     Value = ConfigManager:Get("BlockESPEnabled"),
     Callback = function(state)
         ConfigManager:Set("BlockESPEnabled", state)
@@ -2074,8 +2047,7 @@ local blockESPToggle = ESPTab:Toggle({
             BlockESP:Stop()
         end
     end
-})    
-
+})
 
     -- Death Counter ESP System
     local DeathCounterESP = {
