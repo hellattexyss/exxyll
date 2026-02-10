@@ -696,76 +696,92 @@ function Camlock:CreateMobileButton()
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = button
     
-    -- Dragging variables
+    -- FIXED DRAGGING SYSTEM - NO TELEPORTING
     local isDragging = false
-    local dragStart, startPos
+    local dragStartPosition, buttonStartPosition
+    local lastClickTime = 0
+    local clickCooldown = 0.3
     
-    -- Track if this is a click (not a drag)
-    local isClick = false
-    
-    -- Mouse button down for dragging
+    -- Mouse button down - FIXED
     button.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isDragging = false  -- Start assuming it's not a drag
-            isClick = true      -- Assume it's a click until proven otherwise
-            dragStart = input.Position
-            startPos = button.Position
+            isDragging = true
+            -- FIX: Store ABSOLUTE positions, not relative
+            dragStartPosition = Vector2.new(input.Position.X, input.Position.Y)
+            buttonStartPosition = button.Position
             button.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
         end
     end)
     
-    -- Mouse movement for dragging
+    -- Mouse movement - FIXED
     button.InputChanged:Connect(function(input)
-        if (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
-            if dragStart then
-                local currentPos = input.Position
-                local distance = (currentPos - dragStart).Magnitude
+        if isDragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+            local currentPos = Vector2.new(input.Position.X, input.Position.Y)
+            
+            if dragStartPosition and buttonStartPosition then
+                -- FIX: Calculate delta correctly
+                local delta = currentPos - dragStartPosition
+                local newX = math.clamp(buttonStartPosition.X.Offset + delta.X, 0, viewportSize.X - button.AbsoluteSize.X)
+                local newY = math.clamp(buttonStartPosition.Y.Offset + delta.Y, 0, viewportSize.Y - button.AbsoluteSize.Y)
                 
-                -- If moved more than 5 pixels, it's a drag
-                if distance > 5 then
-                    isDragging = true
-                    isClick = false
+                button.Position = UDim2.new(0, newX, 0, newY)
+            end
+        end
+    end)
+    
+    -- Mouse button up - FIXED
+    button.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if isDragging then
+                isDragging = false
+                
+                -- Restore original color
+                button.BackgroundColor3 = self.ButtonState == "ON" and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(0, 0, 0)
+                
+                -- Check if this was a click (minimal movement)
+                local currentTime = tick()
+                if currentTime - lastClickTime < clickCooldown then
+                    return
+                end
+                
+                if dragStartPosition and input.Position then
+                    local endPos = Vector2.new(input.Position.X, input.Position.Y)
+                    local distance = (dragStartPosition - endPos).Magnitude
                     
-                    if currentPos and dragStart and startPos then
-                        local delta = currentPos - dragStart
-                        local newX = math.clamp(startPos.X.Offset + delta.X, 0, viewportSize.X - button.AbsoluteSize.X)
-                        local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, viewportSize.Y - button.AbsoluteSize.Y)
-                        
-                        button.Position = UDim2.new(0, newX, 0, newY)
+                    -- If moved less than 10 pixels, it's a click
+                    if distance < 10 then
+                        lastClickTime = currentTime
+                        self:Toggle()
                     end
                 end
             end
         end
     end)
     
-    -- Mouse button up
-    button.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            -- Restore original color
+    -- Also handle click for non-drag scenarios
+    button.MouseButton1Click:Connect(function()
+        local currentTime = tick()
+        if currentTime - lastClickTime < clickCooldown then
+            return
+        end
+        lastClickTime = currentTime
+        
+        -- Only toggle if not currently dragging
+        if not isDragging then
+            self:Toggle()
+        end
+    end)
+    
+    -- Handle mouse leave to reset color
+    button.MouseLeave:Connect(function()
+        if not isDragging then
             button.BackgroundColor3 = self.ButtonState == "ON" and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(0, 0, 0)
-            
-            -- If it was a click (not a drag), toggle camlock
-            if isClick and not isDragging then
-                local currentTime = tick()
-                if currentTime - self.LastClickTime > self.ClickCooldown then
-                    self.LastClickTime = currentTime
-                    self:Toggle()
-                end
-            end
-            
-            -- Reset drag state
-            isDragging = false
-            isClick = false
-            dragStart = nil
-            startPos = nil
         end
     end)
     
     self.MobileButton = screenGui
     screenGui.Parent = game:GetService("CoreGui")
 end
-
--- Add this function to the Camlock table in Snippet 3/5, after the CreateMobileButton function
 
 function Camlock:UpdateMobileButtonText()
     if self.MobileButton and self.MobileButton:FindFirstChild("CamlockButton") then
