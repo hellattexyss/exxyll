@@ -2287,29 +2287,42 @@ local blockESPToggle = ESPTab:Toggle({
     })
     
     local loadButton = SettingsTab:Button({
-        Title = "Load Defaults",
-        Desc = "Reset all settings to default values",
-        Callback = function()
-            for key, value in pairs(defaultConfig) do
-                ConfigManager:Set(key, value)
+    Title = "Load Defaults",
+    Desc = "Reset all settings to default values",
+    Callback = function()
+        for key, value in pairs(defaultConfig) do
+            ConfigManager:Set(key, value)
+        end
+        
+        autoBlockToggle:SetValue(defaultConfig.AutoBlockEnabled)
+        m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled)
+        closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange)
+        longRangeSlider:SetValue(defaultConfig.AutoBlockLongRange)
+        camlockToggle:SetValue(defaultConfig.CamlockEnabled)
+        mobileCamlockToggle:SetValue(defaultConfig.MobileCamlockButton)
+        counterESPToggle:SetValue(defaultConfig.CounterESPEnabled)
+        deathCounterESPToggle:SetValue(defaultConfig.DeathCounterESPEnabled)
+        pingESPToggle:SetValue(defaultConfig.PingESPEnabled)
+        blockESPToggle:SetValue(defaultConfig.BlockESPEnabled)
+        highPingToggle:SetValue(defaultConfig.HighPingWarningEnabled)
+        autoToxicToggle:SetValue(defaultConfig.AutoToxicEnabled)
+        toxicMessageInput:SetValue(defaultConfig.AutoToxicMessage)
+        repeatSlider:SetValue(defaultConfig.AutoToxicRepeat)
+        cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown)
+        keybindButton:SetTitle("Change Keybind (Currently: " .. defaultConfig.CamlockKeybind .. ")")
+        
+        -- NEW SETTINGS
+            if targetInfoToggle then
+                targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled)
             end
-            
-            autoBlockToggle:SetValue(defaultConfig.AutoBlockEnabled)
-            m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled)
-            closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange)
-            longRangeSlider:SetValue(defaultConfig.AutoBlockLongRange)
-            camlockToggle:SetValue(defaultConfig.CamlockEnabled)
-            mobileCamlockToggle:SetValue(defaultConfig.MobileCamlockButton)
-            counterESPToggle:SetValue(defaultConfig.CounterESPEnabled)
-            deathCounterESPToggle:SetValue(defaultConfig.DeathCounterESPEnabled)
-            pingESPToggle:SetValue(defaultConfig.PingESPEnabled)
-            blockESPToggle:SetValue(defaultConfig.BlockESPEnabled)
-            highPingToggle:SetValue(defaultConfig.HighPingWarningEnabled)
-            autoToxicToggle:SetValue(defaultConfig.AutoToxicEnabled)
-            toxicMessageInput:SetValue(defaultConfig.AutoToxicMessage)
-            repeatSlider:SetValue(defaultConfig.AutoToxicRepeat)
-            cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown)
-            keybindButton:SetTitle("Change Keybind (Currently: " .. defaultConfig.CamlockKeybind .. ")")
+            if camlockNotificationsToggle then
+                camlockNotificationsToggle:SetValue(defaultConfig.CamlockNotificationsEnabled)
+            end
+            if predictionSlider then
+                predictionSlider:SetValue(defaultConfig.CamlockPrediction)
+            end
+        
+        -- Rest of the existing code...
             
             if AutoBlock.Enabled then
                 AutoBlock:Stop()
@@ -2414,7 +2427,7 @@ local blockESPToggle = ESPTab:Toggle({
 
     OthersTab:Section({
         Title = "30+ More Techs!",
-        Desc = "Join discord server for early access!"
+        Desc = ""
     })
                 
 
@@ -2446,18 +2459,15 @@ local blockESPToggle = ESPTab:Toggle({
         end
     end)
     
-    -- Initialize based on saved state
+    -- Initialize based on saved state (FIXED - ONE NOTIFICATION ONLY)
     task.spawn(function()
         task.wait(2)
         
+        local initializedFeatures = {}
+        
         if ConfigManager:Get("AutoBlockEnabled") then
             AutoBlock:Start()
-            WindUI:Notify({
-                Title = "Auto Block",
-                Content = "Auto Block system initialized from saved settings",
-                Duration = 3,
-                Icon = "check"
-            })
+            table.insert(initializedFeatures, "AutoBlock")
         end
         
         if ConfigManager:Get("CamlockEnabled") then
@@ -2467,6 +2477,8 @@ local blockESPToggle = ESPTab:Toggle({
                 if camlockToggle then
                     camlockToggle:SetValue(false)
                 end
+            else
+                table.insert(initializedFeatures, "Camlock")
             end
         end
         
@@ -2476,35 +2488,52 @@ local blockESPToggle = ESPTab:Toggle({
         
         if ConfigManager:Get("CounterESPEnabled") then
             CounterESP:Start()
+            table.insert(initializedFeatures, "Counter ESP")
         end
         
         if ConfigManager:Get("PingESPEnabled") then
             PingESP:Start()
+            table.insert(initializedFeatures, "Ping ESP")
         end
         
         if ConfigManager:Get("BlockESPEnabled") then
             BlockESP:Start()
+            table.insert(initializedFeatures, "Block ESP")
         end
         
         if ConfigManager:Get("HighPingWarningEnabled") then
             HighPingWarning:Start()
+            table.insert(initializedFeatures, "High Ping Warning")
         end
         
         if ConfigManager:Get("DeathCounterESPEnabled") then
             DeathCounterESP:Start()
+            table.insert(initializedFeatures, "Death Counter ESP")
         end
         
         if ConfigManager:Get("AutoToxicEnabled") then
             AutoToxic:Start()
+            table.insert(initializedFeatures, "Auto Toxic")
+        end
+        
+        -- Send ONE notification with all initialized features
+        if #initializedFeatures > 0 then
+            task.wait(1)
+            local featureList = table.concat(initializedFeatures, ", ")
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Combat UI v1.0",
+                Text = "Features initialized: " .. featureList,
+                Duration = 4,
+            })
+        else
+            task.wait(1)
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Combat UI v1.0",
+                Text = "Waspire's Combat system loaded successfully!",
+                Duration = 4,
+            })
         end
     end)
-    
-    task.wait(1)
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Combat UI v1.0",
-        Text = "Waspire's Combat system loaded successfully!",
-        Duration = 4,
-    })
     
     Window:SwitchTab(1)
     
