@@ -550,21 +550,29 @@ function Camlock:Start()
     
     local target = self:FindClosestTarget()
     if not target then
-        WindUI:Notify({
-            Title = "Camlock",
-            Content = "No target found in camera FOV",
-            Duration = 2,
-            Icon = "alert-triangle"
-        })
+        if ConfigManager:Get("CamlockNotificationsEnabled") then
+            WindUI:Notify({
+                Title = "Camlock",
+                Content = "No target found in camera FOV",
+                Duration = 2,
+                Icon = "alert-triangle"
+            })
+        end
         return false
     end
     
     self.Target = target
     self.Enabled = true
     self.ButtonState = "ON"
+    self.Prediction = ConfigManager:Get("CamlockPrediction") or 0.5
+    self.ShowNotifications = ConfigManager:Get("CamlockNotificationsEnabled")
+    self.ShowTargetInfo = ConfigManager:Get("CamlockTargetInfoEnabled")
     
     self:AddTargetHighlight()
-    self:CreateTargetDisplay()
+    
+    if self.ShowTargetInfo then
+        self:CreateTargetDisplay()
+    end
     
     local heartbeatConn = RunService.Heartbeat:Connect(function()
         if not self.Enabled then return end
@@ -585,8 +593,11 @@ function Camlock:Start()
         if humanoidRootPart then
             local camera = workspace.CurrentCamera
             local targetCFrame = CFrame.new(camera.CFrame.Position, humanoidRootPart.Position)
-            camera.CFrame = camera.CFrame:Lerp(targetCFrame, 0.5)
-            self:UpdateTargetDisplay()
+            camera.CFrame = camera.CFrame:Lerp(targetCFrame, self.Prediction)
+            
+            if self.ShowTargetInfo then
+                self:UpdateTargetDisplay()
+            end
         else
             self:Stop()
         end
@@ -594,30 +605,18 @@ function Camlock:Start()
     
     table.insert(self.Connections, heartbeatConn)
     
-    local charAddedConn = self.Target.CharacterAdded:Connect(function(newChar)
-        task.wait(1)
-        if self.Enabled then
-            self:AddTargetHighlight()
-        end
-    end)
-    
-    local charRemovingConn = self.Target.CharacterRemoving:Connect(function()
-        if self.Enabled then
-            self:Stop()
-        end
-    end)
-    
-    table.insert(self.Connections, charAddedConn)
-    table.insert(self.Connections, charRemovingConn)
+    -- ... rest of the function ...
     
     self:UpdateMobileButtonText()
     
-    WindUI:Notify({
-        Title = "Camlock",
-        Content = "Camlock activated on " .. self.Target.Name,
-        Duration = 2,
-        Icon = "crosshair"
-    })
+    if self.ShowNotifications then
+        WindUI:Notify({
+            Title = "Camlock",
+            Content = "Camlock activated on " .. self.Target.Name,
+            Duration = 2,
+            Icon = "crosshair"
+        })
+    end
     
     return true
 end
@@ -641,12 +640,14 @@ function Camlock:Stop()
     
     self:UpdateMobileButtonText()
     
-    WindUI:Notify({
-        Title = "Camlock",
-        Content = "Camlock deactivated",
-        Duration = 2,
-        Icon = "crosshair"
-    })
+    if self.ShowNotifications then
+        WindUI:Notify({
+            Title = "Camlock",
+            Content = "Camlock deactivated",
+            Duration = 2,
+            Icon = "crosshair"
+        })
+    end
 end
 
 function Camlock:Toggle()
