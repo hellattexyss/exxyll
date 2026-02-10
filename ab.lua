@@ -14,7 +14,10 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         CounterRange = 20,
         M1AfterBlockEnabled = false,
         CamlockEnabled = false,
-        CamlockKeybind = "Q",
+        CamlockKeybind = "Q",      
+        CamlockTargetInfoEnabled = true,  -- ADD THIS
+        CamlockNotificationsEnabled = true,  -- ADD THIS
+        CamlockPrediction = 0.5,  -- ADD THIS (0.1 to 1.0)
         MobileCamlockButton = false,
         DeathCounterESPEnabled = false,
         PingESPEnabled = false,
