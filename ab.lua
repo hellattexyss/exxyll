@@ -2269,6 +2269,7 @@ local blockESPToggle = ESPTab:Toggle({
         m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled)
         closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange)
         longRangeSlider:SetValue(defaultConfig.AutoBlockLongRange)
+        m1RangeSlider:SetValue(defaultConfig.M1AfterBlockRange)
         camlockToggle:SetValue(defaultConfig.CamlockEnabled)
         mobileCamlockToggle:SetValue(defaultConfig.MobileCamlockButton)
         counterESPToggle:SetValue(defaultConfig.CounterESPEnabled)
@@ -2280,90 +2281,82 @@ local blockESPToggle = ESPTab:Toggle({
         toxicMessageInput:SetValue(defaultConfig.AutoToxicMessage)
         repeatSlider:SetValue(defaultConfig.AutoToxicRepeat)
         cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown)
-        keybindButton:SetTitle("Change Keybind (Currently: " .. defaultConfig.CamlockKeybind .. ")")
         
-        -- NEW SETTINGS
-            if targetInfoToggle then
-                targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled)
-            end
-            if camlockNotificationsToggle then
-                camlockNotificationsToggle:SetValue(defaultConfig.CamlockNotificationsEnabled)
-            end
-            if predictionSlider then
-                predictionSlider:SetValue(defaultConfig.CamlockPrediction)
-            end
-        
-        -- Rest of the existing code...
-            
-            if AutoBlock.Enabled then
-                AutoBlock:Stop()
-                if defaultConfig.AutoBlockEnabled then
-                    AutoBlock:Start()
-                end
-            end
-            
-            if Camlock.Enabled then
-                Camlock:Stop()
-            end
-            
-            if CounterESP.Enabled then
-                CounterESP:Stop()
-                if defaultConfig.CounterESPEnabled then
-                    CounterESP:Start()
-                end
-            end
-            
-            if PingESP.Enabled then
-                PingESP:Stop()
-                if defaultConfig.PingESPEnabled then
-                    PingESP:Start()
-                end
-            end
-            
-            if BlockESP.Enabled then
-                BlockESP:Stop()
-                if defaultConfig.BlockESPEnabled then
-                    BlockESP:Start()
-                end
-            end
-            
-            if HighPingWarning.Enabled then
-                HighPingWarning:Stop()
-                if defaultConfig.HighPingWarningEnabled then
-                    HighPingWarning:Start()
-                end
-            end
-            
-            if DeathCounterESP.Enabled then
-                DeathCounterESP:Stop()
-                if defaultConfig.DeathCounterESPEnabled then
-                    DeathCounterESP:Start()
-                end
-            end
-            
-            if AutoToxic.Enabled then
-                AutoToxic:Stop()
-                if defaultConfig.AutoToxicEnabled then
-                    AutoToxic:Start()
-                end
-            end
-            
-            if Camlock.MobileButton and not defaultConfig.MobileCamlockButton then
-                Camlock:RemoveMobileButton()
-            elseif not Camlock.MobileButton and defaultConfig.MobileCamlockButton then
-                Camlock:CreateMobileButton()
-            end
-            
-            Camlock:SetupKeybind()
-            
-            WindUI:Notify({
-                Title = "Success",
-                Content = "Default settings loaded!",
-                Duration = 3,
-                Icon = "check"
-            })
+        -- FIXED: Update keybind input field instead of button
+        if keybindInput then
+            keybindInput:SetValue(defaultConfig.CamlockKeybind)
         end
-    })
+        
+        -- Update camlock settings
+        if targetInfoToggle then
+            targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled)
+        end
+        if predictionSlider then
+            predictionSlider:SetValue(defaultConfig.CamlockPrediction)
+        end
+        
+        -- Stop all running systems
+        if AutoBlock.Enabled then
+            AutoBlock:Stop()
+        end
+        
+        if Camlock.Enabled then
+            Camlock:Stop()
+        end
+        
+        if CounterESP.Enabled then
+            CounterESP:Stop()
+        end
+        
+        if PingESP.Enabled then
+            PingESP:Stop()
+        end
+        
+        if BlockESP.Enabled then
+            BlockESP:Stop()
+        end
+        
+        if HighPingWarning.Enabled then
+            HighPingWarning:Stop()
+        end
+        
+        if DeathCounterESP.Enabled then
+            DeathCounterESP:Stop()
+        end
+        
+        if AutoToxic.Enabled then
+            AutoToxic:Stop()
+        end
+        
+        -- Remove mobile button if it exists
+        if Camlock.MobileButton then
+            Camlock:RemoveMobileButton()
+        end
+        
+        -- Reset Camlock module states
+        Camlock.Enabled = false
+        Camlock.ButtonState = "OFF"
+        Camlock.Keybind = defaultConfig.CamlockKeybind
+        Camlock.MobileButtonVisible = defaultConfig.MobileCamlockButton
+        Camlock.ShowTargetInfo = defaultConfig.CamlockTargetInfoEnabled
+        Camlock.Prediction = defaultConfig.CamlockPrediction
+        
+        -- Re-setup keybind
+        Camlock:SetupKeybind()
+        
+        -- Create mobile button if enabled by default
+        if defaultConfig.MobileCamlockButton then
+            Camlock:CreateMobileButton()
+        end
+        
+        WindUI:Notify({
+            Title = "Success",
+            Content = "Default settings loaded!",
+            Duration = 3,
+            Icon = "check"
+        })
+    end
+})
 
 
     OthersTab:Section({
