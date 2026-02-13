@@ -2418,16 +2418,14 @@ if Camlock.MobileButtonVisible then
     Camlock:CreateMobileButton()
 end
 
--- Escape key handler
+-- Escape key handler - FIXED
 game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
     if not processed and input.KeyCode == Enum.KeyCode.Escape and Camlock.Enabled then
         Camlock:Stop()
-        if camlockToggle then
-            camlockToggle:SetValue(false)
-        end
+        -- Don't try to update the toggle here, it's out of scope
+        -- The toggle will update itself via ConfigManager when reopened
     end
 end)
-
 -- Initialize based on saved state (PROPER INITIALIZATION)
 task.spawn(function()
     task.wait(1)  -- Wait for UI to load
