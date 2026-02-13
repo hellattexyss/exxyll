@@ -2273,6 +2273,7 @@ print("DeathCounterESP:", DeathCounterESP ~= nil)
 print("AutoToxic:", AutoToxic ~= nil)
 print("===========================")
     
+    
     local loadButton = SettingsTab:Button({
     Title = "Load Defaults",
     Desc = "Reset all settings to default values",
@@ -2281,6 +2282,7 @@ print("===========================")
             ConfigManager:Set(key, value)
         end
         
+        -- Update UI elements
         autoBlockToggle:SetValue(defaultConfig.AutoBlockEnabled)
         m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled)
         closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange)
@@ -2298,16 +2300,27 @@ print("===========================")
         repeatSlider:SetValue(defaultConfig.AutoToxicRepeat)
         cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown)
         
-        -- FIXED: Update keybind input field instead of button
-        if keybindInput then
-            keybindInput:SetValue(defaultConfig.CamlockKeybind)
+        --- FIXED: Safely update keybind input if it exists
+        local keybindInputElement = nil
+        -- Find the keybind input in the UI
+        for _, toggle in ipairs(CamlockTab.Elements or {}) do
+            if toggle.Title == "Camlock Keybind" then
+                keybindInputElement = toggle
+                break
+            end
         end
         
-        -- Update camlock settings
-        if targetInfoToggle then
+        if keybindInputElement and keybindInputElement.SetValue then
+            keybindInputElement:SetValue(defaultConfig.CamlockKeybind)
+        end
+        
+        --- FIXED: Safely update target info toggle
+        if targetInfoToggle and targetInfoToggle.SetValue then
             targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled)
         end
-        if predictionSlider then
+        
+        --- FIXED: Safely update prediction slider
+        if predictionSlider and predictionSlider.SetValue then
             predictionSlider:SetValue(defaultConfig.CamlockPrediction)
         end
         
@@ -2373,7 +2386,6 @@ print("===========================")
         })
     end
 })
-
 
     OthersTab:Section({
         Title = "Side Dash Assist (Coming Soon)",
