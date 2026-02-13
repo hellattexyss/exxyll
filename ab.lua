@@ -2284,18 +2284,19 @@ local blockESPToggle = ESPTab:Toggle({
         cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown)
         
         --- FIXED: Direct variable references - capture them in the closure
+        --- FIXED: Direct variable references - use the locals we already have!
         if keybindInput and keybindInput.SetValue then
             keybindInput:SetValue(defaultConfig.CamlockKeybind)
         end
-        
+
         if targetInfoToggle and targetInfoToggle.SetValue then
             targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled)
         end
-        
+
         if predictionSlider and predictionSlider.SetValue then
             predictionSlider:SetValue(defaultConfig.CamlockPrediction)
         end
-        
+     
         -- Stop all running systems
         if AutoBlock.Enabled then
             AutoBlock:Stop()
