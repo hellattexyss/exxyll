@@ -2283,19 +2283,24 @@ local blockESPToggle = ESPTab:Toggle({
         repeatSlider:SetValue(defaultConfig.AutoToxicRepeat)
         cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown)
         
-        --- FIXED: Direct variable references - capture them in the closure
-        --- FIXED: Direct variable references - use the locals we already have!
-        if keybindInput and keybindInput.SetValue then
-            keybindInput:SetValue(defaultConfig.CamlockKeybind)
-        end
+        --- FIXED: Use pcall to safely update these UI elements if they exist
+        pcall(function()
+            if keybindInput and keybindInput.SetValue then
+                keybindInput:SetValue(defaultConfig.CamlockKeybind)
+            end
+        end)
 
-        if targetInfoToggle and targetInfoToggle.SetValue then
-            targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled)
-        end
+        pcall(function()
+            if targetInfoToggle and targetInfoToggle.SetValue then
+                targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled)
+            end
+        end)
 
-        if predictionSlider and predictionSlider.SetValue then
-            predictionSlider:SetValue(defaultConfig.CamlockPrediction)
-        end
+        pcall(function()
+            if predictionSlider and predictionSlider.SetValue then
+                predictionSlider:SetValue(defaultConfig.CamlockPrediction)
+            end
+        end)
      
         -- Stop all running systems
         if AutoBlock.Enabled then
