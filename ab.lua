@@ -2442,22 +2442,7 @@ task.spawn(function()
         end
     end
     
-    -- Update UI toggles to match actual states
-    if camlockToggle then
-        camlockToggle:SetValue(Camlock.Enabled)
-    end
-    
-    if mobileCamlockToggle then
-        mobileCamlockToggle:SetValue(Camlock.MobileButtonVisible)
-    end
-    
-    if targetInfoToggle then
-        targetInfoToggle:SetValue(Camlock.ShowTargetInfo)
-    end
-    
-    if predictionSlider then
-        predictionSlider:SetValue(Camlock.Prediction)
-    end
+    -- Update UI toggles to match actual state
     
     -- Initialize other features
     if ConfigManager:Get("AutoBlockEnabled") then
