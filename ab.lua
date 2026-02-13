@@ -2256,6 +2256,22 @@ local blockESPToggle = ESPTab:Toggle({
             })
         end
     })
+
+    -- DEBUG - Find what's nil
+print("=== DEBUG LOAD DEFAULTS ===")
+print("keybindInput:", keybindInput ~= nil)
+print("targetInfoToggle:", targetInfoToggle ~= nil)
+print("predictionSlider:", predictionSlider ~= nil)
+print("Camlock.MobileButton:", Camlock.MobileButton ~= nil)
+print("Camlock:", Camlock ~= nil)
+print("AutoBlock:", AutoBlock ~= nil)
+print("CounterESP:", CounterESP ~= nil)
+print("PingESP:", PingESP ~= nil)
+print("BlockESP:", BlockESP ~= nil)
+print("HighPingWarning:", HighPingWarning ~= nil)
+print("DeathCounterESP:", DeathCounterESP ~= nil)
+print("AutoToxic:", AutoToxic ~= nil)
+print("===========================")
     
     local loadButton = SettingsTab:Button({
     Title = "Load Defaults",
