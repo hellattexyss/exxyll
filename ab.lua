@@ -2257,7 +2257,6 @@ local blockESPToggle = ESPTab:Toggle({
         end
     })
     
-    
     local loadButton = SettingsTab:Button({
     Title = "Load Defaults",
     Desc = "Reset all settings to default values",
@@ -2284,26 +2283,15 @@ local blockESPToggle = ESPTab:Toggle({
         repeatSlider:SetValue(defaultConfig.AutoToxicRepeat)
         cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown)
         
-        --- FIXED: Safely update keybind input if it exists
-        local keybindInputElement = nil
-        -- Find the keybind input in the UI
-        for _, toggle in ipairs(CamlockTab.Elements or {}) do
-            if toggle.Title == "Camlock Keybind" then
-                keybindInputElement = toggle
-                break
-            end
+        --- FIXED: Direct variable references - capture them in the closure
+        if keybindInput and keybindInput.SetValue then
+            keybindInput:SetValue(defaultConfig.CamlockKeybind)
         end
         
-        if keybindInputElement and keybindInputElement.SetValue then
-            keybindInputElement:SetValue(defaultConfig.CamlockKeybind)
-        end
-        
-        --- FIXED: Safely update target info toggle
         if targetInfoToggle and targetInfoToggle.SetValue then
             targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled)
         end
         
-        --- FIXED: Safely update prediction slider
         if predictionSlider and predictionSlider.SetValue then
             predictionSlider:SetValue(defaultConfig.CamlockPrediction)
         end
@@ -2370,7 +2358,7 @@ local blockESPToggle = ESPTab:Toggle({
         })
     end
 })
-
+    
     OthersTab:Section({
         Title = "Side Dash Assist (Coming Soon)",
         Desc = ""
