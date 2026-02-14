@@ -2535,7 +2535,8 @@ local blockESPToggle = ESPTab:Toggle({
         repeatSlider:SetValue(defaultConfig.AutoToxicRepeat)
         cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown)
         keybindButton:SetTitle("Change Keybind (Currently: " .. defaultConfig.CamlockKeybind .. ")")
-        
+        blockAimToggle:SetValue(defaultConfig.BlockAimEnabled)
+        blockAimSmoothness:SetValue(defaultConfig.BlockAimSmoothness)
         -- NEW SETTINGS
             if targetInfoToggle then
                 targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled)
@@ -2559,7 +2560,10 @@ local blockESPToggle = ESPTab:Toggle({
             if Camlock.Enabled then
                 Camlock:Stop()
             end
-            
+            if ConfigManager:Get("BlockAimEnabled") then
+                BlockAim:Start()
+            table.insert(initializedFeatures, "Block Aim")
+                end
             if CounterESP.Enabled then
                 CounterESP:Stop()
                 if defaultConfig.CounterESPEnabled then
