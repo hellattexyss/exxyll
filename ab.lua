@@ -2560,10 +2560,7 @@ local blockESPToggle = ESPTab:Toggle({
             if Camlock.Enabled then
                 Camlock:Stop()
             end
-            if ConfigManager:Get("BlockAimEnabled") then
-                BlockAim:Start()
-            table.insert(initializedFeatures, "Block Aim")
-                end
+           
             if CounterESP.Enabled then
                 CounterESP:Stop()
                 if defaultConfig.CounterESPEnabled then
@@ -2678,13 +2675,24 @@ local blockESPToggle = ESPTab:Toggle({
     Camlock:SetupKeybind()
     
     -- Escape key handler
+    -- Update the Escape key handler to also stop Block Aim if enabled
     game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
-        if not processed and input.KeyCode == Enum.KeyCode.Escape and Camlock.Enabled then
-            Camlock:Stop()
-            ConfigManager:Set("CamlockEnabled", false)
-            if camlockToggle then
-                camlockToggle:SetValue(false)
+        if not processed and input.KeyCode == Enum.KeyCode.Escape then
+            if Camlock.Enabled then
+                Camlock:Stop()
+                ConfigManager:Set("CamlockEnabled", false)
+                if camlockToggle then
+                    camlockToggle:SetValue(false)
+                end
             end
+        -- Optional: Also stop Block Aim on escape?
+        -- if BlockAim.Enabled then
+        --     BlockAim:Stop()
+        --     ConfigManager:Set("BlockAimEnabled", false)
+        --     if blockAimToggle then
+        --         blockAimToggle:SetValue(false)
+        --     end
+        -- end
         end
     end)
     
@@ -2714,7 +2722,10 @@ local blockESPToggle = ESPTab:Toggle({
         if ConfigManager:Get("MobileCamlockButton") then
             Camlock:CreateMobileButton()
         end
-        
+        if ConfigManager:Get("BlockAimEnabled") then
+            BlockAim:Start()
+            table.insert(initializedFeatures, "Block Aim")
+        end
         if ConfigManager:Get("CounterESPEnabled") then
             CounterESP:Start()
             table.insert(initializedFeatures, "Counter ESP")
