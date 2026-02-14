@@ -1525,6 +1525,7 @@ end
 
     -- REPLACE the existing predictionSlider with this fixed version
     -- REPLACE the existing predictionSlider with this fixed version
+    -- REPLACE the existing predictionSlider with this fixed version
 local predictionSlider = CamlockTab:Slider({
     Title = "Camlock Smoothness",
     Desc = "Camera smoothness (Lower = Snappier, Higher = Smoother)",
@@ -1532,8 +1533,8 @@ local predictionSlider = CamlockTab:Slider({
         Min = 0.1,
         Max = 1.0,
         Default = ConfigManager:Get("CamlockPrediction") or 0.5,
-        Rounding = 1, -- This ensures proper decimal display
-        RealTime = true, -- Updates while sliding
+        Rounding = 1,
+        RealTime = true,
     },
     Callback = function(value)
         -- Convert to number and ensure it's not 0
@@ -1543,7 +1544,7 @@ local predictionSlider = CamlockTab:Slider({
         ConfigManager:Set("CamlockPrediction", numValue)
         Camlock.Prediction = numValue
         
-        -- Fix: Check if predictionSlider exists and has Dragging property
+        -- Check if dragging property exists before using it
         if predictionSlider and predictionSlider.Dragging then
             -- Don't show notification while dragging
         else
@@ -1557,22 +1558,18 @@ local predictionSlider = CamlockTab:Slider({
     end
 })
 
--- Add dragging detection to the slider (FIXED VERSION)
+-- Add dragging detection to the slider (FIXED - REMOVED oldInputBegan)
 predictionSlider.Dragging = false
 
--- Use a separate variable to track dragging state
-local isDragging = false
-
+-- Connect directly without storing in oldInputBegan
 predictionSlider.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDragging = true
         predictionSlider.Dragging = true
     end
 end)
 
 predictionSlider.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDragging = false
         predictionSlider.Dragging = false
     end
 end)
