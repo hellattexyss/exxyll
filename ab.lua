@@ -1523,26 +1523,106 @@ end
         end
     })
 
-    local predictionSlider = CamlockTab:Slider({
-        Title = "Camlock Prediction",
-        Desc = "Adjust camlock smoothness (Lower = Smoother)",
-        Value = {
-            Min = 0.1,
-            Max = 1.0,
-            Default = ConfigManager:Get("CamlockPrediction"),
-        },
-        Callback = function(value)
-            ConfigManager:Set("CamlockPrediction", tonumber(value))
-            Camlock.Prediction = tonumber(value)
+    -- REPLACE the existing predictionSlider with this fixed version
+local predictionSlider = CamlockTab:Slider({
+    Title = "Camlock Smoothness",
+    Desc = "Camera smoothness (Lower = Snappier, Higher = Smoother)",
+    Value = {
+        Min = 0.1,
+        Max = 1.0,
+        Default = ConfigManager:Get("CamlockPrediction") or 0.5,
+        Rounding = 1, -- This ensures proper decimal display
+        RealTime = true, -- Updates while sliding
+    },
+    Callback = function(value)
+        -- Convert to number and ensure it's not 0
+        local numValue = tonumber(value)
+        if numValue < 0.1 then numValue = 0.1 end
         
+        ConfigManager:Set("CamlockPrediction", numValue)
+        Camlock.Prediction = numValue
+        
+        -- Optional: show notification only when finished sliding
+        if not predictionSlider.Dragging then
             WindUI:Notify({
-                Title = "Camlock Prediction",
-                Content = "Prediction set to " .. string.format("%.1f", value),
-                Duration = 2,
+                Title = "Camlock Smoothness",
+                Content = "Smoothness set to " .. string.format("%.1f", numValue),
+                Duration = 1.5,
                 Icon = "settings"
             })
         end
-    })
+    end
+})
+
+-- Add dragging detection to the slider
+predictionSlider.Dragging = false
+local oldInputBegan = predictionSlider.InputBegan
+predictionSlider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        predictionSlider.Dragging = true
+    end
+end)
+
+predictionSlider.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        predictionSlider.Dragging = false
+    end
+end)
+    -- Add this in the Camlock Tab section (Snippet 4), after the prediction slider
+
+CamlockTab:Divider()
+
+CamlockTab:Section({
+    Title = "Block Aim System",
+    Desc = "Automatically aim at enemies while blocking"
+})
+
+local blockAimToggle = CamlockTab:Toggle({
+    Title = "Block Aim",
+    Desc = "Camlocks nearest player when you're blocking",
+    Value = ConfigManager:Get("BlockAimEnabled"),
+    Callback = function(state)
+        ConfigManager:Set("BlockAimEnabled", state)
+        if state then
+            BlockAim:Start()
+            WindUI:Notify({
+                Title = "Block Aim",
+                Content = "Block Aim activated - Will lock when blocking",
+                Duration = 2,
+                Icon = "shield"
+            })
+        else
+            BlockAim:Stop()
+            WindUI:Notify({
+                Title = "Block Aim",
+                Content = "Block Aim deactivated",
+                Duration = 2,
+                Icon = "shield-off"
+            })
+        end
+    end
+})
+
+local blockAimSmoothness = CamlockTab:Slider({
+    Title = "Block Aim Smoothness",
+    Desc = "Camera smoothness when blocking (Lower = Snappier)",
+    Value = {
+        Min = 0.1,
+        Max = 1.0,
+        Default = ConfigManager:Get("BlockAimSmoothness"),
+    },
+    Callback = function(value)
+        ConfigManager:Set("BlockAimSmoothness", tonumber(value))
+        BlockAim:UpdateSmoothness(value)
+        
+        WindUI:Notify({
+            Title = "Block Aim",
+            Content = "Smoothness set to " .. string.format("%.1f", value),
+            Duration = 1.5,
+            Icon = "settings"
+        })
+    end
+})
 -- Snippet 5/5: ESP Systems and Final Initialization
     -- ESP Tab Elements
     ESPTab:Section({
