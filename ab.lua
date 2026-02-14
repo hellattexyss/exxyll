@@ -607,19 +607,6 @@ function Camlock:Start()
     
     -- ... rest of the function ...
     
-    self:UpdateMobileButtonText()
-    
-    if self.ShowNotifications then
-        WindUI:Notify({
-            Title = "Camlock",
-            Content = "Camlock activated on " .. self.Target.Name,
-            Duration = 2,
-            Icon = "crosshair"
-        })
-    end
-    
-    return true
-end
 
 function Camlock:Stop()
     if not self.Enabled then return end
@@ -638,18 +625,6 @@ function Camlock:Stop()
     end
     self.Connections = {}
     
-    self:UpdateMobileButtonText()
-    
-    if self.ShowNotifications then
-        WindUI:Notify({
-            Title = "Camlock",
-            Content = "Camlock deactivated",
-            Duration = 2,
-            Icon = "crosshair"
-        })
-    end
-end
-
 function Camlock:Toggle()
     local currentTime = tick()
     if currentTime - self.LastToggleTime < self.ToggleCooldown then
