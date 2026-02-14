@@ -10,6 +10,8 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         AutoBlockCloseRange = 14,
         AutoBlockLongRange = 35,
         M1AfterBlockRange = 10,  -- ADD THIS LINE
+        BlockAimEnabled = false,
+        BlockAimSmoothness = 0.5,
         CounterESPEnabled = false,
         CounterRange = 20,
         M1AfterBlockEnabled = false,
@@ -819,7 +821,165 @@ function Camlock:SetupKeybind()
             self:Toggle()
         end
     end)
+end
+-- Block Aim System (add after Camlock system)
+local BlockAim = {
+    Enabled = false,
+    Target = nil,
+    TargetHighlight = nil,
+    Connections = {},
+    Smoothness = 0.5,
+    BlockAnimationId = "rbxassetid://10470389827", -- TSB Block Animation
+    IsBlocking = false,
+}
+
+function BlockAim:IsPlayerBlocking(character)
+    if not character or not character:FindFirstChild("Humanoid") then return false end
+    
+    local humanoid = character.Humanoid
+    for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+        if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
+            return true
+        end
     end
+    return false
+end
+
+function BlockAim:FindNearestPlayer()
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
+    
+    local characterPos = character.HumanoidRootPart.Position
+    local closest = nil
+    local closestDistance = math.huge
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local otherChar = player.Character
+            if otherChar and otherChar:FindFirstChild("HumanoidRootPart") and otherChar:FindFirstChild("Humanoid") then
+                local humanoid = otherChar.Humanoid
+                if humanoid.Health > 0 then
+                    local distance = (characterPos - otherChar.HumanoidRootPart.Position).Magnitude
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        closest = player
+                    end
+                end
+            end
+        end
+    end
+    
+    return closest
+end
+
+function BlockAim:AddTargetHighlight()
+    if self.Target and self.Target.Character and not self.TargetHighlight then
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "BlockAimHighlight"
+        highlight.FillColor = Color3.fromRGB(255, 50, 50) -- Same red as camlock
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.3
+        highlight.OutlineTransparency = 0
+        highlight.Adornee = self.Target.Character
+        highlight.Parent = self.Target.Character
+        self.TargetHighlight = highlight
+    end
+end
+
+function BlockAim:RemoveTargetHighlight()
+    if self.TargetHighlight then
+        self.TargetHighlight:Destroy()
+        self.TargetHighlight = nil
+    end
+end
+
+function BlockAim:Start()
+    if self.Enabled then return end
+    
+    self.Enabled = true
+    self.Smoothness = ConfigManager:Get("BlockAimSmoothness") or 0.5
+    
+    local heartbeatConn = RunService.Heartbeat:Connect(function()
+        if not self.Enabled then return end
+        
+        local character = LocalPlayer.Character
+        if not character then
+            self:Stop()
+            return
+        end
+        
+        local isBlocking = self:IsPlayerBlocking(character)
+        
+        if isBlocking and not self.IsBlocking then
+            -- Started blocking - find and lock onto nearest player
+            self.IsBlocking = true
+            self.Target = self:FindNearestPlayer()
+            
+            if self.Target then
+                self:AddTargetHighlight()
+            end
+            
+        elseif not isBlocking and self.IsBlocking then
+            -- Stopped blocking - clear everything
+            self.IsBlocking = false
+            self.Target = nil
+            self:RemoveTargetHighlight()
+            
+        elseif isBlocking and self.IsBlocking and self.Target and self.Target.Character then
+            -- Currently blocking with a target - aim at them
+            local targetChar = self.Target.Character
+            local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+            local targetHumanoid = targetChar:FindFirstChild("Humanoid")
+            
+            if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
+                local camera = workspace.CurrentCamera
+                local targetCFrame = CFrame.new(camera.CFrame.Position, targetRoot.Position)
+                camera.CFrame = camera.CFrame:Lerp(targetCFrame, self.Smoothness)
+            else
+                -- Target died or invalid, find new target
+                self.Target = self:FindNearestPlayer()
+                if self.Target then
+                    self:AddTargetHighlight()
+                else
+                    self:RemoveTargetHighlight()
+                end
+            end
+        end
+    end)
+    
+    table.insert(self.Connections, heartbeatConn)
+end
+
+function BlockAim:Stop()
+    if not self.Enabled then return end
+    
+    self.Enabled = false
+    self.IsBlocking = false
+    self.Target = nil
+    
+    self:RemoveTargetHighlight()
+    
+    for _, conn in ipairs(self.Connections) do
+        if conn then
+            pcall(function() conn:Disconnect() end)
+        end
+    end
+    self.Connections = {}
+end
+
+function BlockAim:Toggle()
+    if self.Enabled then
+        self:Stop()
+        return false
+    else
+        self:Start()
+        return true
+    end
+end
+
+function BlockAim:UpdateSmoothness(value)
+    self.Smoothness = tonumber(value)
+end
 -- Snippet 4/5: UI Setup and Systems
     local InfoTab = Window:Tab({
         Title = "Read Me",
