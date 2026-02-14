@@ -1524,6 +1524,7 @@ end
     })
 
     -- REPLACE the existing predictionSlider with this fixed version
+    -- REPLACE the existing predictionSlider with this fixed version
 local predictionSlider = CamlockTab:Slider({
     Title = "Camlock Smoothness",
     Desc = "Camera smoothness (Lower = Snappier, Higher = Smoother)",
@@ -1542,8 +1543,10 @@ local predictionSlider = CamlockTab:Slider({
         ConfigManager:Set("CamlockPrediction", numValue)
         Camlock.Prediction = numValue
         
-        -- Optional: show notification only when finished sliding
-        if not predictionSlider.Dragging then
+        -- Fix: Check if predictionSlider exists and has Dragging property
+        if predictionSlider and predictionSlider.Dragging then
+            -- Don't show notification while dragging
+        else
             WindUI:Notify({
                 Title = "Camlock Smoothness",
                 Content = "Smoothness set to " .. string.format("%.1f", numValue),
@@ -1554,17 +1557,22 @@ local predictionSlider = CamlockTab:Slider({
     end
 })
 
--- Add dragging detection to the slider
+-- Add dragging detection to the slider (FIXED VERSION)
 predictionSlider.Dragging = false
-local oldInputBegan = predictionSlider.InputBegan
+
+-- Use a separate variable to track dragging state
+local isDragging = false
+
 predictionSlider.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isDragging = true
         predictionSlider.Dragging = true
     end
 end)
 
 predictionSlider.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isDragging = false
         predictionSlider.Dragging = false
     end
 end)
