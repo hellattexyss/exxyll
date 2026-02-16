@@ -16,7 +16,10 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         CounterRange = 20,
         M1AfterBlockEnabled = false,
         CamlockEnabled = false,
-        CamlockKeybind = "Q",      
+        CamlockKeybind = {
+            Key = "Q",
+            Type = "Keyboard"
+        },      
         CamlockTargetInfoEnabled = true,  -- ADD THIS
         CamlockNotificationsEnabled = true,  -- ADD THIS
         CamlockPrediction = 0.5,  -- ADD THIS (0.1 to 1.0)
@@ -811,7 +814,22 @@ function Camlock:SetupKeybind()
             return
         end
         
-        if input.KeyCode.Name == ConfigManager:Get("CamlockKeybind") then
+        -- Get the current keybind configuration
+        local keybindConfig = ConfigManager:Get("CamlockKeybind")
+        local keyName = keybindConfig.Key
+        local inputType = keybindConfig.Type
+        
+        -- Check based on input type
+        if inputType == "Keyboard" and input.KeyCode and input.KeyCode.Name == keyName then
+            local currentTime = tick()
+            if currentTime - self.LastToggleTime < self.ToggleCooldown then
+                return
+            end
+            
+            self.LastToggleTime = currentTime
+            self:Toggle()
+            
+        elseif inputType == "Mouse" and input.UserInputType and input.UserInputType.Name == keyName then
             local currentTime = tick()
             if currentTime - self.LastToggleTime < self.ToggleCooldown then
                 return
