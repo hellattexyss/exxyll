@@ -1446,28 +1446,34 @@ end
         end
     })
     
-    local keybindButton = CamlockTab:Button({
-        Title = "Change Keybind (Currently: " .. ConfigManager:Get("CamlockKeybind") .. ")",
-        Desc = "Click then press a key to set as camlock toggle",
-        Callback = function()
-            WindUI:Notify({
-                Title = "Keybind Setup",
-                Content = "Press any key to set as camlock toggle...",
-                Duration = 5,
-                Icon = "key"
-            })
-            
-            local input = game:GetService("UserInputService").InputBegan:Wait()
-            local key = input.KeyCode.Name
-            
-            ConfigManager:Set("CamlockKeybind", key)
-            keybindButton:SetTitle("Change Keybind (Currently: " .. key .. ")")
-            
+    local currentKeybind = ConfigManager:Get("CamlockKeybind")
+    local keybindInput = CamlockTab:Input({
+        Title = "Camlock Keybind",
+        Desc = "Click the input box and press a key to set keybind",
+        Value = currentKeybind.Key,
+        InputIcon = "key",
+        Type = "Keybind",
+        Placeholder = "Press a key...",
+        Callback = function(input)
+        -- Store the new keybind value
+            local newKeybind = {
+                Key = input,
+                Type = "Keyboard"
+            }
+        
+        -- Check if it's a mouse button instead
+            if input:find("Button") then
+                newKeybind.Type = "Mouse"
+            end
+        
+            ConfigManager:Set("CamlockKeybind", newKeybind)
+        
+        -- Update the keybind in the Camlock system
             Camlock:SetupKeybind()
-            
+        
             WindUI:Notify({
                 Title = "Keybind Updated",
-                Content = "Camlock keybind set to: " .. key,
+                Content = "Camlock keybind set to: " .. input,
                 Duration = 3,
                 Icon = "check"
             })
@@ -2553,7 +2559,7 @@ local blockESPToggle = ESPTab:Toggle({
         toxicMessageInput:SetValue(defaultConfig.AutoToxicMessage)
         repeatSlider:SetValue(defaultConfig.AutoToxicRepeat)
         cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown)
-        keybindButton:SetTitle("Change Keybind (Currently: " .. defaultConfig.CamlockKeybind .. ")")
+        keybindInput:SetValue(defaultConfig.CamlockKeybind.Key)
         blockAimToggle:SetValue(defaultConfig.BlockAimEnabled)
         blockAimSmoothness:SetValue(defaultConfig.BlockAimSmoothness)
         -- NEW SETTINGS
