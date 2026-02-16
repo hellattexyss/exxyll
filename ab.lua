@@ -191,6 +191,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     })
 
 -- Snippet 2/5: AutoBlock Core Functions
+-- Snippet 2/5: AutoBlock Core Functions
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -200,8 +201,122 @@ local AutoBlock = {
     Blocking = false,
     Connections = {},
     CounterNotifierCooldowns = {},
-    CounterHighlights = {}
+    CounterHighlights = {},
+    CachedCommunicate = nil,
+    CachedM1Remote = nil,
 }
+
+function AutoBlock:FindCommunicateRemote()
+    -- Return cached if available
+    if self.CachedCommunicate then
+        return self.CachedCommunicate
+    end
+    
+    local character = LocalPlayer.Character
+    if not character then return nil end
+    
+    -- Try to find Communicate in character first
+    local communicate = character:FindFirstChild("Communicate")
+    if communicate then
+        self.CachedCommunicate = communicate
+        return communicate
+    end
+    
+    -- Try to find in PlayerScripts
+    local playerScripts = LocalPlayer:FindFirstChild("PlayerScripts")
+    if playerScripts then
+        communicate = playerScripts:FindFirstChild("Communicate")
+        if communicate then
+            self.CachedCommunicate = communicate
+            return communicate
+        end
+    end
+    
+    -- Search in ReplicatedStorage
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    communicate = replicatedStorage:FindFirstChild("Communicate")
+    if communicate then
+        self.CachedCommunicate = communicate
+        return communicate
+    end
+    
+    -- Search in RemoteEvent containers
+    local remoteContainers = {
+        replicatedStorage:FindFirstChild("Remotes"),
+        replicatedStorage:FindFirstChild("Network"),
+        replicatedStorage:FindFirstChild("Events"),
+        game:GetService("Players"):FindFirstChild("Remotes"),
+    }
+    
+    for _, container in ipairs(remoteContainers) do
+        if container then
+            communicate = container:FindFirstChild("Communicate")
+            if communicate then
+                self.CachedCommunicate = communicate
+                return communicate
+            end
+            
+            -- Also check for any remote that sounds like Communicate
+            for _, child in ipairs(container:GetChildren()) do
+                if child.Name:lower():find("communicate") or 
+                   child.Name:lower():find("key") or 
+                   child.Name:lower():find("input") then
+                    self.CachedCommunicate = child
+                    return child
+                end
+            end
+        end
+    end
+    
+    return nil
+end
+
+function AutoBlock:FindM1Remote()
+    -- Return cached if available
+    if self.CachedM1Remote then
+        return self.CachedM1Remote
+    end
+    
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    
+    -- Common M1 remote names in TSB
+    local m1RemoteNames = {
+        "LeftClick",
+        "Click",
+        "Attack",
+        "M1",
+        "Melee",
+        "Punch",
+        "Combat",
+    }
+    
+    -- Search in common locations
+    local locations = {
+        replicatedStorage,
+        replicatedStorage:FindFirstChild("Remotes"),
+        replicatedStorage:FindFirstChild("Network"),
+        LocalPlayer:FindFirstChild("PlayerScripts"),
+    }
+    
+    for _, location in ipairs(locations) do
+        if location then
+            for _, name in ipairs(m1RemoteNames) do
+                local remote = location:FindFirstChild(name)
+                if remote then
+                    self.CachedM1Remote = remote
+                    return remote
+                end
+            end
+        end
+    end
+    
+    -- Fallback to the original Communicate remote
+    local communicate = self:FindCommunicateRemote()
+    if communicate then
+        self.CachedM1Remote = communicate
+    end
+    return self.CachedM1Remote
+end
 
 function AutoBlock:IsPlayingAnimation(humanoid, animationList)
     if not humanoid then return false end
@@ -214,51 +329,106 @@ function AutoBlock:IsPlayingAnimation(humanoid, animationList)
 end
 
 function AutoBlock:PressBlockKey()
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChild("Communicate") then
-        character.Communicate:FireServer(unpack({
+    local communicate = self:FindCommunicateRemote()
+    if not communicate then 
+        -- Debug notification (only show once)
+        if not self.ShownRemoteError then
+            self.ShownRemoteError = true
+            WindUI:Notify({
+                Title = "AutoBlock Error",
+                Content = "Could not find Communicate remote",
+                Duration = 2,
+                Icon = "alert-triangle"
+            })
+        end
+        return 
+    end
+    
+    -- Try different argument structures
+    local success = pcall(function()
+        -- Structure 1: Table with KeyPress
+        communicate:FireServer(unpack({
             [1] = {
                 Goal = "KeyPress",
                 Key = Enum.KeyCode.F,
             },
         }))
+    end)
+    
+    if not success then
+        -- Try structure 2: Direct arguments
+        pcall(function()
+            communicate:FireServer("KeyPress", Enum.KeyCode.F)
+        end)
     end
 end
 
 function AutoBlock:ReleaseBlockKey()
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChild("Communicate") then
-        character.Communicate:FireServer(unpack({
+    local communicate = self:FindCommunicateRemote()
+    if not communicate then return end
+    
+    pcall(function()
+        -- Structure 1: Table with KeyRelease
+        communicate:FireServer(unpack({
             [1] = {
                 Goal = "KeyRelease",
                 Key = Enum.KeyCode.F,
             },
         }))
-    end
+    end)
+    
+    -- Also try to release via direct method
+    pcall(function()
+        communicate:FireServer("KeyRelease", Enum.KeyCode.F)
+    end)
 end
 
 function AutoBlock:PressM1()
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChild("Communicate") then
-        character.Communicate:FireServer(unpack({
-            [1] = {
-                Goal = "LeftClick",
-                Mobile = true,
-            },
-        }))
-    end
+    local m1Remote = self:FindM1Remote()
+    if not m1Remote then return end
+    
+    pcall(function()
+        -- Try different M1 structures
+        if m1Remote.Name == "Communicate" then
+            -- If it's Communicate remote, use the original structure
+            m1Remote:FireServer(unpack({
+                [1] = {
+                    Goal = "LeftClick",
+                    Mobile = true,
+                },
+            }))
+        else
+            -- If it's a dedicated M1 remote, try direct call
+            m1Remote:FireServer(true)
+        end
+    end)
+    
+    -- Also try the alternative structure
+    pcall(function()
+        m1Remote:FireServer("LeftClick", true)
+    end)
 end
 
 function AutoBlock:ReleaseM1()
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChild("Communicate") then
-        character.Communicate:FireServer(unpack({
-            [1] = {
-                Goal = "LeftClickRelease",
-                Mobile = true,
-            },
-        }))
-    end
+    local m1Remote = self:FindM1Remote()
+    if not m1Remote then return end
+    
+    pcall(function()
+        if m1Remote.Name == "Communicate" then
+            m1Remote:FireServer(unpack({
+                [1] = {
+                    Goal = "LeftClickRelease",
+                    Mobile = true,
+                },
+            }))
+        else
+            m1Remote:FireServer(false)
+        end
+    end)
+    
+    pcall(function()
+        m1Remote:FireServer("LeftClickRelease", true)
+    end)
 end
 
 function AutoBlock:Start()
@@ -266,7 +436,8 @@ function AutoBlock:Start()
     
     self.Enabled = true
     self.Blocking = false
-        
+    self.ShownRemoteError = false -- Reset error flag
+    
     local heartbeatConn = RunService.Heartbeat:Connect(function()
         if not self.Enabled then return end
         
@@ -274,7 +445,7 @@ function AutoBlock:Start()
         local longRange = ConfigManager:Get("AutoBlockLongRange")
         local closeMoves = ConfigManager:Get("CloseRangeMoves")
         local longMoves = ConfigManager:Get("LongRangeMoves")
-        local m1Range = ConfigManager:Get("M1AfterBlockRange")  -- ADD THIS
+        local m1Range = ConfigManager:Get("M1AfterBlockRange")
                 
         local character = LocalPlayer.Character
         if not character or not character:FindFirstChild("HumanoidRootPart") then return end
