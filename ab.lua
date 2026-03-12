@@ -876,32 +876,18 @@ function Camlock:SetupKeybind()
         self.KeybindConnection:Disconnect()
     end
     
-    self.KeybindConnection = self.InputService.InputBegan:Connect(function(input, processed)
-        if processed then
-            return
-        end
-        
-        -- Get the current keybind configuration
-        local keybindConfig = ConfigManager:Get("CamlockKeybind")
-        local keyName = keybindConfig.Key
-        local inputType = keybindConfig.Type
-        
-        -- Check based on input type
-        if inputType == "Keyboard" and input.KeyCode and input.KeyCode.Name == keyName then
+    local keybindConfig = ConfigManager:Get("CamlockKeybind")
+    local keyName = keybindConfig.Key
+    
+    -- Convert string to Enum.KeyCode
+    local keyCode = Enum.KeyCode[keyName]
+    if not keyCode then return end
+    
+    self.KeybindConnection = game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == keyCode then
             local currentTime = tick()
-            if currentTime - self.LastToggleTime < self.ToggleCooldown then
-                return
-            end
-            
-            self.LastToggleTime = currentTime
-            self:Toggle()
-            
-        elseif inputType == "Mouse" and input.UserInputType and input.UserInputType.Name == keyName then
-            local currentTime = tick()
-            if currentTime - self.LastToggleTime < self.ToggleCooldown then
-                return
-            end
-            
+            if currentTime - self.LastToggleTime < self.ToggleCooldown then return end
             self.LastToggleTime = currentTime
             self:Toggle()
         end
