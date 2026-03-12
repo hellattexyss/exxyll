@@ -177,7 +177,14 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     end
     
     function ConfigManager:Get(key)
-        return currentConfig[key] or defaultConfig[key]
+    -- Safely get from currentConfig, fallback to defaultConfig
+    if currentConfig and currentConfig[key] ~= nil then
+        return currentConfig[key]
+    end
+    if defaultConfig and defaultConfig[key] ~= nil then
+        return defaultConfig[key]
+    end
+    return nil
     end
     
     function ConfigManager:Set(key, value)
