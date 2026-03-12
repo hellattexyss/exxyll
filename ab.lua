@@ -1,6 +1,82 @@
 -- Snippet 1/5: Configuration and Setup
 if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceId == 131048399685555 then
-    local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/rebelscodeee-max/WindUI-Forked-by-orialdev/refs/heads/main/WindUI%20Forked"))()
+    -- HTTP compatibility wrapper for executors that block game:HttpGet()
+local WindUI = nil
+local url = "https://raw.githubusercontent.com/rebelscodeee-max/WindUI-Forked-by-orialdev/refs/heads/main/WindUI%20Forked"
+
+-- Try multiple HTTP methods
+local function fetchURL()
+    -- Method 1: request (Krnl, Fluxus, ScriptWare)
+    if request then
+        local success, response = pcall(function()
+            return request({
+                Url = url,
+                Method = "GET"
+            })
+        end)
+        if success and response and response.StatusCode == 200 then
+            return response.Body
+        end
+    end
+    
+    -- Method 2: syn.request (Synapse)
+    if syn and syn.request then
+        local success, response = pcall(function()
+            return syn.request({
+                Url = url,
+                Method = "GET"
+            })
+        end)
+        if success and response and response.StatusCode == 200 then
+            return response.Body
+        end
+    end
+    
+    -- Method 3: http_request (older executors)
+    if http_request then
+        local success, response = pcall(function()
+            return http_request({
+                Url = url,
+                Method = "GET"
+            })
+        end)
+        if success and response and response.StatusCode == 200 then
+            return response.Body
+        end
+    end
+    
+    -- Method 4: game:HttpGet (last resort - this is what's being blocked)
+    local success, result = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if success then
+        return result
+    end
+    
+    return nil
+end
+
+local content = fetchURL()
+if content then
+    local func, err = loadstring(content)
+    if func then
+        WindUI = func()
+    else
+        game:StarterGui:SetCore("SendNotification", {
+            Title = "Combat UI - Error",
+            Text = "Failed to load UI: " .. tostring(err),
+            Duration = 5
+        })
+        return
+    end
+else
+    game:StarterGui:SetCore("SendNotification", {
+        Title = "Combat UI - Error",
+        Text = "HTTP request failed - executor blocks all methods",
+        Duration = 5
+    })
+    return
+end
     
     local ConfigManager = {}
     local configFile = "WaspireCombatUI.json"
