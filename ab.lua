@@ -381,7 +381,6 @@ local Camlock = {
     Prediction = 0.5,  -- Default prediction value
     ShowNotifications = true,  -- Default notification setting
     ShowTargetInfo = true,  -- Default target info setting
-    -- ... existing properties ...
 }
     
 function Camlock:FindClosestTarget()
