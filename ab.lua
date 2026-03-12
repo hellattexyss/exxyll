@@ -72,7 +72,8 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         WhiteCounterAnimation = "rbxassetid://15311685628",
         BlueCounterAnimation = "rbxassetid://12351854556"
     }
-    
+
+local currentConfig = {}   
     function ConfigManager:Load()
     if isfile(configFile) then
         local success, data = pcall(function()
@@ -116,8 +117,7 @@ local keybindCheck = ConfigManager:Get("CamlockKeybind")
         ConfigManager:Set("CamlockKeybind", {Key = "Q", Type = "Keyboard"})
 end
     
--- FIXED: Load config immediately
-local currentConfig = {}
+-- FIXED: Load config immediate
 ConfigManager:Load()
     
     local Window = WindUI:CreateWindow({
