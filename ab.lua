@@ -1446,39 +1446,38 @@ end
         end
     })
     
-    local currentKeybind = ConfigManager:Get("CamlockKeybind")
     local keybindInput = CamlockTab:Input({
-        Title = "Camlock Keybind",
-        Desc = "Click the input box and press a key to set keybind",
-        Value = currentKeybind.Key,
-        InputIcon = "key",
-        Type = "Keybind",
-        Placeholder = "Press a key...",
-        Callback = function(input)
+    Title = "Camlock Keybind",
+    Desc = "Click the input box and press a key to set keybind",
+    Value = currentKeybind.Key,
+    InputIcon = "key",
+    Type = "Keybind",
+    Placeholder = "Press a key...",
+    Callback = function(input)
         -- Store the new keybind value
-            local newKeybind = {
-                Key = input,
-                Type = "Keyboard"
-            }
+        local newKeybind = {
+            Key = input,
+            Type = "Keyboard"
+        }
         
         -- Check if it's a mouse button instead
-            if input:find("Button") then
-                newKeybind.Type = "Mouse"
-            end
+        if input:find("Button") then
+            newKeybind.Type = "Mouse"
+        end
         
-            ConfigManager:Set("CamlockKeybind", newKeybind)
+        ConfigManager:Set("CamlockKeybind", newKeybind)
         
         -- Update the keybind in the Camlock system
-            Camlock:SetupKeybind()
+        Camlock:SetupKeybind()
         
-            WindUI:Notify({
-                Title = "Keybind Updated",
-                Content = "Camlock keybind set to: " .. input,
-                Duration = 3,
-                Icon = "check"
-            })
-        end
-    })
+        WindUI:Notify({
+            Title = "Keybind Updated",
+            Content = "Camlock keybind set to: " .. input,
+            Duration = 3,
+            Icon = "check"
+        })
+    end
+})
     
     local mobileCamlockToggle = CamlockTab:Toggle({
         Title = "Mobile Camlock Button",
