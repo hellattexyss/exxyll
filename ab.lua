@@ -92,6 +92,14 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         end
         return false
     end
+
+    ConfigManager:Load()
+
+-- Ensure CamlockKeybind exists in config
+    local keybindCheck = ConfigManager:Get("CamlockKeybind")
+    if not keybindCheck or type(keybindCheck) ~= "table" then
+        ConfigManager:Set("CamlockKeybind", {Key = "Q", Type = "Keyboard"})
+    end
     
     function ConfigManager:Save()
         local success = pcall(function()
