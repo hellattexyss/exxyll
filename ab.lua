@@ -1,6 +1,73 @@
 -- Snippet 1/5: Configuration and Setup
 if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceId == 131048399685555 then
-    local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/orialdev/WindUI-Forked-by-orialdev/main/WindUI%20Forked"))()
+    -- Simple HTTP fallback that actually works
+local WindUI = nil
+local url = "https://raw.githubusercontent.com/rebelscodeee-max/WindUI-Forked-by-orialdev/refs/heads/main/WindUI%20Forked"
+
+-- Try all common methods in order of likelihood
+local function fetchUrl()
+    -- Method 1: request (Krnl, Fluxus, ScriptWare)
+    if request then
+        local success, response = pcall(function()
+            return request({Url = url, Method = "GET"})
+        end)
+        if success and response and response.StatusCode == 200 then
+            return response.Body
+        end
+    end
+    
+    -- Method 2: syn.request (Synapse)
+    if syn and syn.request then
+        local success, response = pcall(function()
+            return syn.request({Url = url, Method = "GET"})
+        end)
+        if success and response and response.StatusCode == 200 then
+            return response.Body
+        end
+    end
+    
+    -- Method 3: http_request (older executors)
+    if http_request then
+        local success, response = pcall(function()
+            return http_request({Url = url, Method = "GET"})
+        end)
+        if success and response and response.StatusCode == 200 then
+            return response.Body
+        end
+    end
+    
+    -- Method 4: game:HttpGet (last resort)
+    local success, result = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if success then
+        return result
+    end
+    
+    return nil
+end
+
+local content = fetchUrl()
+if content then
+    local func, err = loadstring(content)
+    if func then
+        WindUI = func()
+    else
+        game:StarterGui:SetCore("SendNotification", {
+            Title = "Error",
+            Text = "Failed to load UI: " .. tostring(err),
+            Duration = 5
+        })
+        return
+    end
+else
+    game:StarterGui:SetCore("SendNotification", {
+        Title = "Error",
+        Text = "Cannot fetch UI - Executor blocks HTTP requests",
+        Duration = 5
+    })
+    return
+end
     
     local ConfigManager = {}
     local configFile = "WaspireCombatUI.json"
