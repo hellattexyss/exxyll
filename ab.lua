@@ -1445,10 +1445,19 @@ end
         end
     })
     
-    local keybindInput = CamlockTab:Input({
+    -- Get the keybind config safely
+local keybindConfig = ConfigManager:Get("CamlockKeybind")
+local keybindValue = "Q" -- Default fallback
+
+-- Check if keybindConfig exists and has a Key property
+if keybindConfig and type(keybindConfig) == "table" then
+    keybindValue = keybindConfig.Key or "Q"
+end
+
+local keybindInput = CamlockTab:Input({
     Title = "Camlock Keybind",
     Desc = "Click the input box and press a key to set keybind",
-    Value = currentKeybind.Key,
+    Value = keybindValue,  -- Now using safe value
     InputIcon = "key",
     Type = "Keybind",
     Placeholder = "Press a key...",
@@ -1477,6 +1486,7 @@ end
         })
     end
 })
+    
     
     local mobileCamlockToggle = CamlockTab:Toggle({
         Title = "Mobile Camlock Button",
