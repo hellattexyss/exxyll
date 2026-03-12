@@ -111,6 +111,11 @@ function ConfigManager:Set(key, value)
     self:Save()
 end
 
+local keybindCheck = ConfigManager:Get("CamlockKeybind")
+    if not keybindCheck or type(keybindCheck) ~= "table" then
+        ConfigManager:Set("CamlockKeybind", {Key = "Q", Type = "Keyboard"})
+end
+    
 -- FIXED: Load config immediately
 local currentConfig = {}
 ConfigManager:Load()
