@@ -1,6 +1,7 @@
 -- Snippet 1/5: Configuration and Setup
 if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceId == 131048399685555 then
     -- HTTP compatibility wrapper for executors that block game:HttpGet()
+    -- HTTP compatibility wrapper for executors that block game:HttpGet()
 local WindUI = nil
 local url = "https://raw.githubusercontent.com/rebelscodeee-max/WindUI-Forked-by-orialdev/refs/heads/main/WindUI%20Forked"
 
@@ -45,7 +46,7 @@ local function fetchURL()
         end
     end
     
-    -- Method 4: game:HttpGet (last resort - this is what's being blocked)
+    -- Method 4: game:HttpGet (last resort)
     local success, result = pcall(function()
         return game:HttpGet(url)
     end)
@@ -58,9 +59,41 @@ end
 
 local content = fetchURL()
 if content then
+    -- Check if the content is valid
+    print("Content length: " .. #content)
+    
+    -- Try to load the content
     local func, err = loadstring(content)
     if func then
-        WindUI = func()
+        -- Execute the loaded function and capture the return value
+        local success, result = pcall(func)
+        if success then
+            -- Some UI libraries return the object directly, others set global variables
+            if result then
+                WindUI = result
+            elseif WindUI_Loaded then  -- Check for common global variable names
+                WindUI = WindUI_Loaded
+            elseif Library then
+                WindUI = Library
+            elseif UI then
+                WindUI = UI
+            else
+                -- If nothing returned, try to get the last global that was created
+                for _, globalName in ipairs({"WindUI", "Library", "UI", "Interface", "Gui"}) do
+                    if getfenv()[globalName] then
+                        WindUI = getfenv()[globalName]
+                        break
+                    end
+                end
+            end
+        else
+            game:StarterGui:SetCore("SendNotification", {
+                Title = "Combat UI - Error",
+                Text = "Failed to execute UI: " .. tostring(result),
+                Duration = 5
+            })
+            return
+        end
     else
         game:StarterGui:SetCore("SendNotification", {
             Title = "Combat UI - Error",
@@ -77,6 +110,18 @@ else
     })
     return
 end
+
+-- Final check to make sure WindUI is valid
+if not WindUI then
+    game:StarterGui:SetCore("SendNotification", {
+        Title = "Combat UI - Error",
+        Text = "WindUI loaded but returned nil value",
+        Duration = 5
+    })
+    return
+end
+
+print("Combat UI loaded successfully:", type(WindUI))
     
     local ConfigManager = {}
     local configFile = "WaspireCombatUI.json"
