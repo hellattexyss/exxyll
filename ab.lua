@@ -73,51 +73,47 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         BlueCounterAnimation = "rbxassetid://12351854556"
     }
     
-    local currentConfig = {}
-    
     function ConfigManager:Load()
-        if isfile(configFile) then
-            local success, data = pcall(function()
-                return game:GetService("HttpService"):JSONDecode(readfile(configFile))
-            end)
-            if success then
-                for key, value in pairs(data) do
-                    currentConfig[key] = value
-                end
-                return true
-            end
-        end
-        for key, value in pairs(defaultConfig) do
-            currentConfig[key] = value
-        end
-        return false
-    end
-
-    ConfigManager:Load()
-
--- Ensure CamlockKeybind exists in config
-    local keybindCheck = ConfigManager:Get("CamlockKeybind")
-    if not keybindCheck or type(keybindCheck) ~= "table" then
-        ConfigManager:Set("CamlockKeybind", {Key = "Q", Type = "Keyboard"})
-    end
-    
-    function ConfigManager:Save()
-        local success = pcall(function()
-            writefile(configFile, game:GetService("HttpService"):JSONEncode(currentConfig))
+    if isfile(configFile) then
+        local success, data = pcall(function()
+            return game:GetService("HttpService"):JSONDecode(readfile(configFile))
         end)
-        return success
+        if success then
+            for key, value in pairs(data) do
+                currentConfig[key] = value
+            end
+            return true
+        end
     end
-    
-    function ConfigManager:Get(key)
-        return currentConfig[key] or defaultConfig[key]
-    end
-    
-    function ConfigManager:Set(key, value)
+    for key, value in pairs(defaultConfig) do
         currentConfig[key] = value
-        self:Save()
     end
-    
-    ConfigManager:Load()
+    return false
+end
+
+function ConfigManager:Save()
+    local success = pcall(function()
+        writefile(configFile, game:GetService("HttpService"):JSONEncode(currentConfig))
+    end)
+    return success
+end
+
+function ConfigManager:Get(key)
+    -- FIXED: Add nil check
+    if not currentConfig or not defaultConfig then
+        return nil
+    end
+    return currentConfig[key] or defaultConfig[key]
+end
+
+function ConfigManager:Set(key, value)
+    currentConfig[key] = value
+    self:Save()
+end
+
+-- FIXED: Load config immediately
+local currentConfig = {}
+ConfigManager:Load()
     
     local Window = WindUI:CreateWindow({
         Title = "Combat UI - Waspire",
