@@ -824,7 +824,7 @@ function Camlock:SetupKeybind()
         
         -- Get the current keybind configuration
         local keybindConfig = ConfigManager:Get("CamlockKeybind")
-        local keyName = keybindConfig.Key
+        local keyName = keybindConfig.Key  -- This is "Q" or whatever string
         local inputType = keybindConfig.Type
         
         -- Check based on input type
