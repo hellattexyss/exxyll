@@ -1463,25 +1463,16 @@ if keybindConfig and type(keybindConfig) == "table" then
     keybindValue = keybindConfig.Key or "Q"
 end
 
-local keybindInput = CamlockTab:Input({
+local keybindInput = CamlockTab:Keybind({
     Title = "Camlock Keybind",
-    Desc = "Click the input box and press a key to set keybind",
-    Value = keybindValue,  -- Now using safe value
-    InputIcon = "key",
-    Type = "Keybind",
-    Placeholder = "Press a key...",
-    Callback = function(input)
+    Desc = "Key to toggle camlock on/off",
+    Value = keybindValue,  -- YOUR existing variable
+    Callback = function(v)  -- v is the key string
         -- Store the new keybind value
         local newKeybind = {
-            Key = input,
+            Key = v,
             Type = "Keyboard"
         }
-        
-        -- Check if it's a mouse button instead
-        if input:find("Button") then
-            newKeybind.Type = "Mouse"
-        end
-        
         ConfigManager:Set("CamlockKeybind", newKeybind)
         
         -- Update the keybind in the Camlock system
@@ -1489,9 +1480,9 @@ local keybindInput = CamlockTab:Input({
         
         WindUI:Notify({
             Title = "Keybind Updated",
-            Content = "Camlock keybind set to: " .. input,
-            Duration = 3,
-            Icon = "check"
+            Content = "Camlock keybind set to: " .. v,
+            Duration = 2,
+            Icon = "key"
         })
     end
 })
