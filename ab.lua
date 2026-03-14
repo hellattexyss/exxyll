@@ -1008,7 +1008,7 @@ function BlockAim:UpdateSmoothness(value)
 end
 -- Snippet 4/5: UI Setup and System
     -- Create the new info tabs
-    Window:Divider()
+    
     
     local ChangelogTab = Window:Tab({
         Title = "Info",
@@ -1029,7 +1029,7 @@ end
     })
 
 -- Add another divider after the info tabs
-    Window:Divider()
+    
     
     local CombatTab = Window:Tab({
         Title = "Combat",
