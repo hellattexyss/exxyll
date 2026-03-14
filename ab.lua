@@ -1006,12 +1006,30 @@ end
 function BlockAim:UpdateSmoothness(value)
     self.Smoothness = tonumber(value)
 end
--- Snippet 4/5: UI Setup and Systems
-    local InfoTab = Window:Tab({
-        Title = "Read Me",
+-- Snippet 4/5: UI Setup and System
+    -- Create the new info tabs
+    Window:AddDivider()
+    
+    local ChangelogTab = Window:Tab({
+        Title = "Info",
         Icon = "book",
         Locked = false,
     })
+
+    local HomeTab = Window:Tab({
+        Title = "Home",
+        Icon = "home",
+        Locked = false,
+    })
+
+    local CreditsTab = Window:Tab({
+        Title = "Credits",
+        Icon = "heart",
+        Locked = false,
+    })
+
+-- Add another divider after the info tabs
+    Window:AddDivider()
     
     local CombatTab = Window:Tab({
         Title = "Combat",
@@ -1051,35 +1069,35 @@ end
 
     -- Info Tab Content
     -- Simple changelog display like the screenshot
-    
-    InfoTab:Image({
-        Image = "rbxassetid://100810111630142", -- Your script icon
+    ChangelogTab:Image({
+        Image = "rbxassetid://100810111630142",
         Size = UDim2.fromOffset(60, 60),
         CornerRadius = UDim.new(0.2, 0)
     })
-    
-    InfoTab:Section({
+
+    ChangelogTab:Section({
         Title = "Version Information",
         Desc = "Current: v1.0 — Status: Working"
     })
 
-    InfoTab:Paragraph({
+    ChangelogTab:Paragraph({
         Title = "Greetings, " .. game.Players.LocalPlayer.Name .. "!",
         Desc = "Welcome to Waspire Combat UI!\n\n📋 Latest Changes (07/02/26):\n\n• Added AutoBlock System\n• Added Camlock System\n• Added several ESP features!\n• Added a lot of stuff to Utility tab\n\n🌟 Coming Soon:\n\n• Side Dash Assist (Hook Dash)\n• All sorts of techs! (gonna be fire)"
     })
-        
-    InfoTab:Section({
+
+-- Home Tab Content
+    HomeTab:Section({
         Title = "Discord Community",
-        Desc = "Our Discord server statistics"
+        Desc = "Join our Discord server for help/assistance!"
     })
 
-    local discordStatsLabel = InfoTab:Paragraph({
-        Title = "Join our Discord server for help/assistance!",
-        Desc = "Members: 32100\nOnline: 4000"
+    HomeTab:Paragraph({
+        Title = "Server Statistics",
+        Desc = "Members: 32,100\nOnline: 4,000"
     })
 
-    InfoTab:Button({
-        Title = "Copy Invite Link",
+    HomeTab:Button({
+        Title = "Copy Discord Invite",
         Desc = "Copy Discord invite link to clipboard",
         Callback = function()
             setclipboard("https://discord.gg/H2bURQxq3T")
@@ -1092,17 +1110,17 @@ end
         end
     })
 
-    InfoTab:Section({
+    HomeTab:Section({
         Title = "YouTube Channel",
-        Desc = "Waspire's YouTube statistics"
+        Desc = "Subscribe to Waspire for more!"
     })
 
-    local youtubeStatsLabel = InfoTab:Paragraph({
-        Title = "Subscribe to Waspire for more!",
+    HomeTab:Paragraph({
+        Title = "Channel Statistics",
         Desc = "Subscribers: 26,000"
     })
 
-    InfoTab:Button({
+    HomeTab:Button({
         Title = "Copy YouTube Link",
         Desc = "Copy YouTube channel link to clipboard",
         Callback = function()
@@ -1116,7 +1134,26 @@ end
         end
     })
 
-        
+-- Credits Tab Content
+    CreditsTab:Section({
+        Title = "Credits",
+        Desc = "People who made this possible"
+    })
+
+    CreditsTab:Paragraph({
+        Title = "Developer",
+        Desc = "Waspire - Main developer and creator"
+    })
+
+    CreditsTab:Paragraph({
+        Title = "Contributors",
+        Desc = "• WindUI Team - UI Library\n• Community Testers - Bug reports and feedback"
+    })
+
+    CreditsTab:Paragraph({
+        Title = "Special Thanks",
+        Desc = "Thanks to everyone who supported this project!"
+    })
     -- Fixed Auto Toxic System
     local AutoToxic = {
         Enabled = false,
