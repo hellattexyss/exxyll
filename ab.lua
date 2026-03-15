@@ -213,8 +213,6 @@ if not adsystemCompleted then
 end
 
 ::mainscript::
-
-
 if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceId == 131048399685555 then
     local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/rebelscodeee-max/WindUI-Forked-by-orialdev/refs/heads/main/WindUI%20Forked"))()
     
