@@ -183,7 +183,6 @@ button.MouseButton1Click:Connect(function()
 end)
 
 -- Wait for completion (simulate with timer for now)
--- In a real scenario, you'd check some condition or wait for a signal
 task.wait(60)
 
 -- Save completion permanently
@@ -213,6 +212,7 @@ if not adsystemCompleted then
 end
 
 ::mainscript::
+
 if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceId == 131048399685555 then
     local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/rebelscodeee-max/WindUI-Forked-by-orialdev/refs/heads/main/WindUI%20Forked"))()
     
