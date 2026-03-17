@@ -1,4 +1,4 @@
--- Waspire Adsystem (Improved)
+-- Waspire Adsystem (Improved) - Only appears once per execution
 local player = game.Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
@@ -9,10 +9,10 @@ local isfile = isfile or function() return false end
 local writefile = writefile or function() end
 local makefolder = makefolder or function() end
 local isfolder = isfolder or function() return false end
-local delfile = delfile or function() end
 
 local folder = "Waspire"
 local file = folder.."/adsystem_completed.txt"
+local ranThisSession = false
 
 -- Create folder
 pcall(function()
@@ -21,189 +21,204 @@ pcall(function()
     end
 end)
 
--- Already completed - load main script directly
-if isfile(file) then
-    StarterGui:SetCore("SendNotification",{
-        Title="Waspire",
-        Text="Adsystem already completed. Loading script...",
-        Duration=5
-    })
-else
-    -- Blur
-    local blur = Instance.new("BlurEffect")
-    blur.Size = 0
-    blur.Parent = Lighting
+-- Check if already completed EVER
+local isCompleted = isfile(file)
 
-    TweenService:Create(
-        blur,
-        TweenInfo.new(0.8,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
-        {Size = 18}
-    ):Play()
+-- Check if already ran THIS SESSION
+if not ranThisSession then
+    ranThisSession = true
+    
+    -- If already completed, just show a quick notification and continue
+    if isCompleted then
+        StarterGui:SetCore("SendNotification",{
+            Title="Waspire",
+            Text="Adsystem already completed. Loading script...",
+            Duration=3
+        })
+    else
+        -- Show adsystem GUI
+        -- Blur
+        local blur = Instance.new("BlurEffect")
+        blur.Size = 0
+        blur.Parent = Lighting
 
-    -- Reminder system
-    local remindersActive = true
+        TweenService:Create(
+            blur,
+            TweenInfo.new(0.8,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+            {Size = 18}
+        ):Play()
 
-    task.spawn(function()
-        while remindersActive do
+        -- Reminder system
+        local remindersActive = true
+
+        task.spawn(function()
+            while remindersActive do
+                StarterGui:SetCore("SendNotification",{
+                    Title="Waspire",
+                    Text="Complete the tasks to get access to the script!",
+                    Duration=6
+                })
+                task.wait(15)
+            end
+        end)
+
+        -- GUI
+        local gui = Instance.new("ScreenGui")
+        gui.Parent = player:WaitForChild("PlayerGui")
+
+        -- Gradient glow
+        local glow = Instance.new("Frame")
+        glow.Size = UDim2.new(0,440,0,260)
+        glow.Position = UDim2.new(0.5,-220,0.5,-130)
+        glow.BackgroundColor3 = Color3.fromRGB(0,0,0)
+        glow.BorderSizePixel = 0
+        glow.Parent = gui
+
+        local c1 = Instance.new("UICorner",glow)
+        c1.CornerRadius = UDim.new(0,20)
+
+        local grad = Instance.new("UIGradient")
+        grad.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0,Color3.fromRGB(180,0,0)),
+            ColorSequenceKeypoint.new(1,Color3.fromRGB(0,0,0))
+        }
+        grad.Rotation = 45
+        grad.Parent = glow
+
+        -- Main frame
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(0,420,0,240)
+        frame.Position = UDim2.new(0.5,-210,0.5,-120)
+        frame.BackgroundTransparency = 1
+        frame.Parent = gui
+
+        local c2 = Instance.new("UICorner",frame)
+        c2.CornerRadius = UDim.new(0,18)
+
+        -- Title
+        local title = Instance.new("TextLabel")
+        title.Size = UDim2.new(1,0,0,45)
+        title.Position = UDim2.new(0,0,0,20)
+        title.BackgroundTransparency = 1
+        title.Text = "Waspire"
+        title.Font = Enum.Font.GothamBold
+        title.TextSize = 34
+        title.TextColor3 = Color3.fromRGB(220,0,0)
+        title.TextXAlignment = Enum.TextXAlignment.Center
+        title.Parent = frame
+
+        -- Subtitle
+        local sub = Instance.new("TextLabel")
+        sub.Size = UDim2.new(1,0,0,25)
+        sub.Position = UDim2.new(0,0,0,60)
+        sub.BackgroundTransparency = 1
+        sub.Text = "One-time Adsystem"
+        sub.Font = Enum.Font.Gotham
+        sub.TextSize = 16
+        sub.TextColor3 = Color3.fromRGB(200,200,200)
+        sub.TextXAlignment = Enum.TextXAlignment.Center
+        sub.Parent = frame
+
+        -- Description
+        local desc = Instance.new("TextLabel")
+        desc.Size = UDim2.new(0.85,0,0,60)
+        desc.Position = UDim2.new(0.075,0,0,100)
+        desc.BackgroundTransparency = 1
+        desc.TextWrapped = true
+        desc.Text = "You need to complete a few tasks to get access to this script. (This adsystem only appears ONCE ever)"
+        desc.Font = Enum.Font.Gotham
+        desc.TextSize = 15
+        desc.TextColor3 = Color3.fromRGB(170,170,170)
+        desc.TextXAlignment = Enum.TextXAlignment.Center
+        desc.Parent = frame
+
+        -- Button
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(0.55,0,0,45)
+        button.Position = UDim2.new(0.225,0,1,-65)
+        button.BackgroundColor3 = Color3.fromRGB(170,0,0)
+        button.Text = "Complete Tasks"
+        button.TextSize = 17
+        button.Font = Enum.Font.GothamBold
+        button.TextColor3 = Color3.new(1,1,1)
+        button.Parent = frame
+
+        local c3 = Instance.new("UICorner",button)
+        c3.CornerRadius = UDim.new(0,12)
+
+        -- Hover
+        button.MouseEnter:Connect(function()
+            TweenService:Create(button,TweenInfo.new(0.15),{
+                BackgroundColor3 = Color3.fromRGB(220,0,0)
+            }):Play()
+        end)
+
+        button.MouseLeave:Connect(function()
+            TweenService:Create(button,TweenInfo.new(0.15),{
+                BackgroundColor3 = Color3.fromRGB(170,0,0)
+            }):Play()
+        end)
+
+        -- Loading effect
+        local adsystemCompleted = false
+
+        button.MouseButton1Click:Connect(function()
+            if adsystemCompleted then return end
+            
+            if setclipboard then
+                setclipboard("https://waspireads.lovable.app/")
+            end
+            
             StarterGui:SetCore("SendNotification",{
                 Title="Waspire",
-                Text="Complete the tasks to get access to the script!",
+                Text="Link copied. Complete the tasks in your browser.",
                 Duration=6
             })
-            task.wait(15)
-        end
-    end)
-
-    -- GUI
-    local gui = Instance.new("ScreenGui")
-    gui.Parent = player.PlayerGui
-
-    -- Gradient glow
-    local glow = Instance.new("Frame")
-    glow.Size = UDim2.new(0,440,0,260)
-    glow.Position = UDim2.new(0.5,-220,0.5,-130)
-    glow.BackgroundColor3 = Color3.fromRGB(0,0,0)
-    glow.BorderSizePixel = 0
-    glow.Parent = gui
-
-    local c1 = Instance.new("UICorner",glow)
-    c1.CornerRadius = UDim.new(0,20)
-
-    local grad = Instance.new("UIGradient")
-    grad.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0,Color3.fromRGB(180,0,0)),
-        ColorSequenceKeypoint.new(1,Color3.fromRGB(0,0,0))
-    }
-    grad.Rotation = 45
-    grad.Parent = glow
-
-    -- Main frame
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0,420,0,240)
-    frame.Position = UDim2.new(0.5,-210,0.5,-120)
-    frame.BackgroundTransparency = 1
-    frame.Parent = gui
-
-    local c2 = Instance.new("UICorner",frame)
-    c2.CornerRadius = UDim.new(0,18)
-
-    -- Title
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1,0,0,45)
-    title.Position = UDim2.new(0,0,0,20)
-    title.BackgroundTransparency = 1
-    title.Text = "Waspire"
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 34
-    title.TextColor3 = Color3.fromRGB(220,0,0)
-    title.TextXAlignment = Enum.TextXAlignment.Center
-    title.Parent = frame
-
-    -- Subtitle
-    local sub = Instance.new("TextLabel")
-    sub.Size = UDim2.new(1,0,0,25)
-    sub.Position = UDim2.new(0,0,0,60)
-    sub.BackgroundTransparency = 1
-    sub.Text = "One-time Adsystem"
-    sub.Font = Enum.Font.Gotham
-    sub.TextSize = 16
-    sub.TextColor3 = Color3.fromRGB(200,200,200)
-    sub.TextXAlignment = Enum.TextXAlignment.Center
-    sub.Parent = frame
-
-    -- Description
-    local desc = Instance.new("TextLabel")
-    desc.Size = UDim2.new(0.85,0,0,60)
-    desc.Position = UDim2.new(0.075,0,0,100)
-    desc.BackgroundTransparency = 1
-    desc.TextWrapped = true
-    desc.Text = "You need to complete a few tasks to get access to this script. (This adsystem only appears ONCE ever)"
-    desc.Font = Enum.Font.Gotham
-    desc.TextSize = 15
-    desc.TextColor3 = Color3.fromRGB(170,170,170)
-    desc.TextXAlignment = Enum.TextXAlignment.Center
-    desc.Parent = frame
-
-    -- Button
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0.55,0,0,45)
-    button.Position = UDim2.new(0.225,0,1,-65)
-    button.BackgroundColor3 = Color3.fromRGB(170,0,0)
-    button.Text = "Complete Tasks"
-    button.TextSize = 17
-    button.Font = Enum.Font.GothamBold
-    button.TextColor3 = Color3.new(1,1,1)
-    button.Parent = frame
-
-    local c3 = Instance.new("UICorner",button)
-    c3.CornerRadius = UDim.new(0,12)
-
-    -- Hover
-    button.MouseEnter:Connect(function()
-        TweenService:Create(button,TweenInfo.new(0.15),{
-            BackgroundColor3 = Color3.fromRGB(220,0,0)
-        }):Play()
-    end)
-
-    button.MouseLeave:Connect(function()
-        TweenService:Create(button,TweenInfo.new(0.15),{
-            BackgroundColor3 = Color3.fromRGB(170,0,0)
-        }):Play()
-    end)
-
-    -- Loading effect
-    local adsystemCompleted = false
-
-    button.MouseButton1Click:Connect(function()
-        if adsystemCompleted then return end
-        
-        setclipboard("https://waspireads.lovable.app/")
-        
-        StarterGui:SetCore("SendNotification",{
-            Title="Waspire",
-            Text="Link copied. Complete the tasks in your browser.",
-            Duration=6
-        })
-        
-        button.BackgroundColor3 = Color3.fromRGB(120,120,120)
-        button.Text = "Loading"
-        
-        task.spawn(function()
-            for i=1,5 do
-                button.Text = "Loading"..string.rep(".",i)
-                task.wait(0.5)
-            end
-            button.Text = "Waiting to complete"
-            button.TextColor3 = Color3.fromRGB(200,200,200)
+            
+            button.BackgroundColor3 = Color3.fromRGB(120,120,120)
+            button.Text = "Loading"
+            
+            task.spawn(function()
+                for i=1,5 do
+                    button.Text = "Loading"..string.rep(".",i)
+                    task.wait(0.5)
+                end
+                button.Text = "Waiting to complete"
+                button.TextColor3 = Color3.fromRGB(200,200,200)
+            end)
         end)
-    end)
 
-    -- Wait for completion (simulate with timer for now)
-    task.wait(60)
+        -- Wait for completion (simulate with timer)
+        task.wait(30)
 
-    -- Save completion permanently
-    if not adsystemCompleted then
-        adsystemCompleted = true
-        writefile(file,"completed")
-        
-        -- Stop notifications
-        remindersActive = false
-        
-        -- Fade out
-        TweenService:Create(blur,TweenInfo.new(0.5),{Size=0}):Play()
-        
-        task.wait(0.6)
-        
-        gui:Destroy()
-        blur:Destroy()
-        
-        StarterGui:SetCore("SendNotification",{
-            Title="Waspire",
-            Text="You've completed all tasks. Script access granted!",
-            Duration=6
-        })
+        -- Save completion permanently
+        if not adsystemCompleted then
+            adsystemCompleted = true
+            pcall(function()
+                writefile(file,"completed")
+            end)
+            
+            -- Stop notifications
+            remindersActive = false
+            
+            -- Fade out
+            TweenService:Create(blur,TweenInfo.new(0.5),{Size=0}):Play()
+            
+            task.wait(0.6)
+            
+            gui:Destroy()
+            blur:Destroy()
+            
+            StarterGui:SetCore("SendNotification",{
+                Title="Waspire",
+                Text="You've completed all tasks. Script access granted!",
+                Duration=6
+            })
+        end
     end
 end
+
+-- Your main script continues below this line
 
 -- Your main script continues below this line
 
