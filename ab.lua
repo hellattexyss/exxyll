@@ -854,15 +854,6 @@ function Camlock:Start()
     
     return true
 end
-
-if self.ShowNotifications then
-    WindUI:Notify({
-        Title = "Camlock",
-        Content = "Camlock activated on " .. self.Target.Name,
-        Duration = 2,
-        Icon = "crosshair"
-    })
-end
     
 function Camlock:Stop()
     if not self.Enabled then return end
