@@ -1078,6 +1078,7 @@ function Camlock:SetupKeybind()
     end)
 end
 -- Block Aim System (add after Camlock system)
+-- Block Aim System - FIXED VERSION
 local BlockAim = {
     Enabled = false,
     Target = nil,
@@ -1086,6 +1087,8 @@ local BlockAim = {
     Smoothness = 0.5,
     BlockAnimationId = "rbxassetid://10470389827", -- TSB Block Animation
     IsBlocking = false,
+    LastTargetUpdate = 0,
+    TargetUpdateInterval = 0.5, -- Update target every 0.5 seconds
 }
 
 function BlockAim:IsPlayerBlocking(character)
@@ -1093,8 +1096,15 @@ function BlockAim:IsPlayerBlocking(character)
     
     local humanoid = character.Humanoid
     for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-        if track.Animation and track.Animation.AnimationId == self.BlockAnimationId then
-            return true
+        -- FIXED: Check multiple possible block animation IDs
+        if track.Animation then
+            local animId = track.Animation.AnimationId
+            if animId == self.BlockAnimationId or 
+               animId == "rbxassetid://10470389827" or
+               string.find(animId, "block") or
+               string.find(animId:lower(), "guard") then
+                return true
+            end
         end
     end
     return false
@@ -1131,7 +1141,7 @@ function BlockAim:AddTargetHighlight()
     if self.Target and self.Target.Character and not self.TargetHighlight then
         local highlight = Instance.new("Highlight")
         highlight.Name = "BlockAimHighlight"
-        highlight.FillColor = Color3.fromRGB(255, 50, 50) -- Same red as camlock
+        highlight.FillColor = Color3.fromRGB(255, 50, 50)
         highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
         highlight.FillTransparency = 0.3
         highlight.OutlineTransparency = 0
@@ -1151,6 +1161,12 @@ end
 function BlockAim:Start()
     if self.Enabled then return end
     
+    -- FIXED: Check config at start
+    local configEnabled = ConfigManager:Get("BlockAimEnabled")
+    if not configEnabled then
+        return
+    end
+    
     self.Enabled = true
     self.Smoothness = ConfigManager:Get("BlockAimSmoothness") or 0.5
     
@@ -1164,6 +1180,7 @@ function BlockAim:Start()
         end
         
         local isBlocking = self:IsPlayerBlocking(character)
+        local currentTime = tick()
         
         if isBlocking and not self.IsBlocking then
             -- Started blocking - find and lock onto nearest player
@@ -1180,29 +1197,55 @@ function BlockAim:Start()
             self.Target = nil
             self:RemoveTargetHighlight()
             
-        elseif isBlocking and self.IsBlocking and self.Target and self.Target.Character then
-            -- Currently blocking with a target - aim at them
-            local targetChar = self.Target.Character
-            local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-            local targetHumanoid = targetChar:FindFirstChild("Humanoid")
-            
-            if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
-                local camera = workspace.CurrentCamera
-                local targetCFrame = CFrame.new(camera.CFrame.Position, targetRoot.Position)
-                camera.CFrame = camera.CFrame:Lerp(targetCFrame, self.Smoothness)
-            else
-                -- Target died or invalid, find new target
-                self.Target = self:FindNearestPlayer()
-                if self.Target then
-                    self:AddTargetHighlight()
+        elseif isBlocking and self.IsBlocking then
+            -- Currently blocking - refresh target periodically
+            if currentTime - self.LastTargetUpdate > self.TargetUpdateInterval then
+                self.LastTargetUpdate = currentTime
+                
+                -- Check if current target is still valid
+                if self.Target and self.Target.Character then
+                    local targetChar = self.Target.Character
+                    local targetHumanoid = targetChar:FindFirstChild("Humanoid")
+                    if not targetHumanoid or targetHumanoid.Health <= 0 then
+                        self.Target = self:FindNearestPlayer()
+                        self:RemoveTargetHighlight()
+                        if self.Target then
+                            self:AddTargetHighlight()
+                        end
+                    end
                 else
+                    self.Target = self:FindNearestPlayer()
                     self:RemoveTargetHighlight()
+                    if self.Target then
+                        self:AddTargetHighlight()
+                    end
+                end
+            end
+            
+            -- Aim at current target if exists
+            if self.Target and self.Target.Character then
+                local targetChar = self.Target.Character
+                local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+                local targetHumanoid = targetChar:FindFirstChild("Humanoid")
+                
+                if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
+                    local camera = workspace.CurrentCamera
+                    local targetCFrame = CFrame.new(camera.CFrame.Position, targetRoot.Position)
+                    camera.CFrame = camera.CFrame:Lerp(targetCFrame, self.Smoothness)
                 end
             end
         end
     end)
     
     table.insert(self.Connections, heartbeatConn)
+    
+    -- FIXED: Show notification
+    WindUI:Notify({
+        Title = "Block Aim",
+        Content = "Block Aim activated - Will lock when blocking",
+        Duration = 2,
+        Icon = "shield"
+    })
 end
 
 function BlockAim:Stop()
@@ -1220,21 +1263,33 @@ function BlockAim:Stop()
         end
     end
     self.Connections = {}
+    
+    -- FIXED: Show notification
+    WindUI:Notify({
+        Title = "Block Aim",
+        Content = "Block Aim deactivated",
+        Duration = 2,
+        Icon = "shield-off"
+    })
 end
 
 function BlockAim:Toggle()
     if self.Enabled then
         self:Stop()
+        ConfigManager:Set("BlockAimEnabled", false)  -- FIXED: Update config
         return false
     else
+        ConfigManager:Set("BlockAimEnabled", true)   -- FIXED: Update config
         self:Start()
         return true
     end
 end
 
-function BlockAim:UpdateSmoothness(value)
+function BlockAim:UpdateSmoothness(value)  -- FIXED: Correct function name
     self.Smoothness = tonumber(value)
 end
+
+        
 -- Snippet 4/5: UI Setup and System
     -- Create the new info tabs
     
