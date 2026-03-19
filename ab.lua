@@ -786,7 +786,7 @@ function Camlock:Start()
     
     local target = self:FindClosestTarget()
     if not target then
-        if ConfigManager:Get("CamlockNotificationsEnabled") then
+        if self.ShowNotifications then  -- FIXED: Using self.ShowNotifications
             WindUI:Notify({
                 Title = "Camlock",
                 Content = "No target found in camera FOV",
@@ -801,7 +801,7 @@ function Camlock:Start()
     self.Enabled = true
     self.ButtonState = "ON"
     self.Prediction = ConfigManager:Get("CamlockPrediction") or 0.5
-    self.ShowNotifications = ConfigManager:Get("CamlockNotificationsEnabled")
+    self.ShowNotifications = ConfigManager:Get("CamlockNotificationsEnabled")  -- FIXED: Update from config
     self.ShowTargetInfo = ConfigManager:Get("CamlockTargetInfoEnabled")
     
     self:AddTargetHighlight()
@@ -841,11 +841,9 @@ function Camlock:Start()
     
     table.insert(self.Connections, heartbeatConn)
     
-    -- ... rest of the function ...
-    
     self:UpdateMobileButtonText()
     
-    if self.ShowNotifications then
+    if self.ShowNotifications then  -- FIXED: Using self.ShowNotifications
         WindUI:Notify({
             Title = "Camlock",
             Content = "Camlock activated on " .. self.Target.Name,
@@ -857,6 +855,15 @@ function Camlock:Start()
     return true
 end
 
+if self.ShowNotifications then
+    WindUI:Notify({
+        Title = "Camlock",
+        Content = "Camlock activated on " .. self.Target.Name,
+        Duration = 2,
+        Icon = "crosshair"
+    })
+end
+    
 function Camlock:Stop()
     if not self.Enabled then return end
     
