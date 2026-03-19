@@ -1939,42 +1939,51 @@ local blockAimToggle = CamlockTab:Toggle({
         ConfigManager:Set("BlockAimEnabled", state)
         if state then
             BlockAim:Start()
-            WindUI:Notify({
-                Title = "Block Aim",
-                Content = "Block Aim activated - Will lock when blocking",
-                Duration = 2,
-                Icon = "shield"
-            })
+            -- FIXED: Only show notification if enabled in config
+            if ConfigManager:Get("CamlockNotificationsEnabled") then
+                WindUI:Notify({
+                    Title = "Block Aim",
+                    Content = "Block Aim activated - Will lock when blocking",
+                    Duration = 2,
+                    Icon = "shield"
+                })
+            end
         else
             BlockAim:Stop()
-            WindUI:Notify({
-                Title = "Block Aim",
-                Content = "Block Aim deactivated",
-                Duration = 2,
-                Icon = "shield-off"
-            })
+            -- FIXED: Only show notification if enabled in config
+            if ConfigManager:Get("CamlockNotificationsEnabled") then
+                WindUI:Notify({
+                    Title = "Block Aim",
+                    Content = "Block Aim deactivated",
+                    Duration = 2,
+                    Icon = "shield-off"
+                })
+            end
         end
     end
 })
-
+        
 local blockAimSmoothness = CamlockTab:Slider({
     Title = "Block Aim Smoothness",
     Desc = "Camera smoothness when blocking (Lower = Snappier)",
     Value = {
         Min = 0.1,
         Max = 1.0,
-        Default = ConfigManager:Get("BlockAimSmoothness"),
+        Default = ConfigManager:Get("BlockAimSmoothness") or 0.5,  -- FIXED: Added fallback
     },
     Callback = function(value)
         ConfigManager:Set("BlockAimSmoothness", tonumber(value))
-        BlockAim:UpdateSmoothness(value)
+        BlockAim:UpdateSmoothness(value)  -- FIXED: Function name is correct now
         
-        WindUI:Notify({
-            Title = "Block Aim",
-            Content = "Smoothness set to " .. string.format("%.1f", value),
-            Duration = 1.5,
-            Icon = "settings"
-        })
+        -- FIXED: Only show notification if enabled in config
+        if ConfigManager:Get("CamlockNotificationsEnabled") then
+            WindUI:Notify({
+                Title = "Block Aim",
+                Content = "Smoothness set to " .. string.format("%.1f", value),
+                Duration = 1.5,
+                Icon = "settings"
+            })
+        end
     end
 })
 -- Snippet 5/5: ESP Systems and Final Initialization
