@@ -344,7 +344,7 @@ end
 ConfigManager:Load()
     
     local Window = WindUI:CreateWindow({
-        Title = "Combat UI - Waspire",
+        Title = "Auto Block | Combat UI",
         Icon = "rbxassetid://122251684068515",
         Author = "The Strongest Battlegrounds",
         Folder = "CombatGUI",
@@ -354,7 +354,7 @@ ConfigManager:Load()
         BorderColor = Color3.fromHex("#DC143C"),
         Resizable = true,
         SideBarWidth = 135,
-        HideSearchBar = true,
+        HideSearchBar = false,
         ScrollBarEnabled = true,
         MinimizeEnabled = true,
         CloseEnabled = true,
@@ -367,7 +367,7 @@ ConfigManager:Load()
     })
     
     Window:Tag({
-        Title = "Working!",
+        Title = "RELEASED!",
         Icon = "star",
         Color = Color3.fromHex("#000000"),
         BorderColor = Color3.fromHex("#DC143C"),
@@ -410,7 +410,7 @@ ConfigManager:Load()
     
     Window:EditOpenButton({
         Title = "Open Combat UI - v1.0",
-        Icon = "sword",
+        Icon = "rbxassetid://122251684068515",
         CornerRadius = UDim.new(0,16),
         StrokeThickness = 2,
         Color = ColorSequence.new(
