@@ -842,137 +842,142 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     })
     
     -- ==================== SETTINGS TAB CONTENT ====================
-    SettingsTab:Section({
-        Title = "Settings Management",
-        Desc = "Save and load your configuration",
-        Icon = "save"
-    })
-    
-    local saveButton = SettingsTab:Button({
-        Title = "Save Configuration",
-        Desc = "Save current settings to file",
-        Icon = "save",
-        Callback = function()
-            ConfigManager:Save()
-            WindUI:Notify({
-                Title = "Success",
-                Content = "Configuration saved successfully!",
-                Duration = 3,
-                Icon = "check"
-            })
-        end
-    })
-    
-    local function loadDefaults()
-        for key, value in pairs(defaultConfig) do
-            ConfigManager:Set(key, value)
-        end
-        
-        autoBlockToggle:SetValue(defaultConfig.AutoBlockEnabled)
-        m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled)
-        closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange)
-        longRangeSlider:SetValue(defaultConfig.AutoBlockLongRange)
-        m1RangeSlider:SetValue(defaultConfig.M1AfterBlockRange)
-        camlockToggle:SetValue(defaultConfig.CamlockEnabled)
-        mobileCamlockToggle:SetValue(defaultConfig.MobileCamlockButton)
-        counterESPToggle:SetValue(defaultConfig.CounterESPEnabled)
-        deathCounterESPToggle:SetValue(defaultConfig.DeathCounterESPEnabled)
-        pingESPToggle:SetValue(defaultConfig.PingESPEnabled)
-        blockESPToggle:SetValue(defaultConfig.BlockESPEnabled)
-        highPingToggle:SetValue(defaultConfig.HighPingWarningEnabled)
-        autoToxicToggle:SetValue(defaultConfig.AutoToxicEnabled)
-        toxicMessageInput:SetValue(defaultConfig.AutoToxicMessage)
-        repeatSlider:SetValue(defaultConfig.AutoToxicRepeat)
-        cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown)
-        keybindInput:SetValue(defaultConfig.CamlockKeybind.Key)
-        blockAimToggle:SetValue(defaultConfig.BlockAimEnabled)
-        blockAimSmoothness:SetValue(defaultConfig.BlockAimSmoothness)
-        
-        if targetInfoToggle then
-            targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled)
-        end
-        if camlockNotificationsToggle then
-            camlockNotificationsToggle:SetValue(defaultConfig.CamlockNotificationsEnabled)
-        end
-        if predictionSlider then
-            predictionSlider:SetValue(defaultConfig.CamlockPrediction)
-        end
-        
-        if AutoBlock.Enabled then
-            AutoBlock:Stop()
-            if defaultConfig.AutoBlockEnabled then
-                AutoBlock:Start()
-            end
-        end
-        
-        if Camlock.Enabled then
-            Camlock:Stop()
-        end
-        
-        if CounterESP.Enabled then
-            CounterESP:Stop()
-            if defaultConfig.CounterESPEnabled then
-                CounterESP:Start()
-            end
-        end
-        
-        if PingESP.Enabled then
-            PingESP:Stop()
-            if defaultConfig.PingESPEnabled then
-                PingESP:Start()
-            end
-        end
-        
-        if BlockESP.Enabled then
-            BlockESP:Stop()
-            if defaultConfig.BlockESPEnabled then
-                BlockESP:Start()
-            end
-        end
-        
-        if HighPingWarning.Enabled then
-            HighPingWarning:Stop()
-            if defaultConfig.HighPingWarningEnabled then
-                HighPingWarning:Start()
-            end
-        end
-        
-        if DeathCounterESP.Enabled then
-            DeathCounterESP:Stop()
-            if defaultConfig.DeathCounterESPEnabled then
-                DeathCounterESP:Start()
-            end
-        end
-        
-        if AutoToxic.Enabled then
-            AutoToxic:Stop()
-            if defaultConfig.AutoToxicEnabled then
-                AutoToxic:Start()
-            end
-        end
-        
-        if Camlock.MobileButton and not defaultConfig.MobileCamlockButton then
-            Camlock:RemoveMobileButton()
-        elseif not Camlock.MobileButton and defaultConfig.MobileCamlockButton then
-            Camlock:CreateMobileButton()
-        end
-        
-        Camlock:SetupKeybind()
-        
+    -- ==================== SETTINGS TAB CONTENT ====================
+SettingsTab:Section({
+    Title = "Settings Management",
+    Desc = "Save and load your configuration",
+    Icon = "save"
+})
+
+local saveButton = SettingsTab:Button({
+    Title = "Save Configuration",
+    Desc = "Save current settings to file",
+    Icon = "save",
+    Callback = function()
+        ConfigManager:Save()
         WindUI:Notify({
             Title = "Success",
-            Content = "Default settings loaded!",
+            Content = "Configuration saved successfully!",
             Duration = 3,
             Icon = "check"
         })
     end
+})
+
+-- DEFINE THE FUNCTION FIRST (but we'll reference it later)
+local loadDefaultsFunction = nil
+
+local loadDefaultsButton = SettingsTab:Button({
+    Title = "Load Defaults",
+    Desc = "Reset all settings to default values",
+    Icon = "refresh-cw",
+    Callback = function()
+        if loadDefaultsFunction then
+            loadDefaultsFunction()
+        end
+    end
+})
+
+-- Now define the actual function that will be set AFTER all UI elements are created
+loadDefaultsFunction = function()
+    for key, value in pairs(defaultConfig) do
+        ConfigManager:Set(key, value)
+    end
     
-    local loadDefaultsButton = SettingsTab:Button({
-        Title = "Load Defaults",
-        Desc = "Reset all settings to default values",
-        Icon = "refresh-cw",
-        Callback = loadDefaults
+    -- Use pcall to safely update each UI element
+    pcall(function() if autoBlockToggle then autoBlockToggle:SetValue(defaultConfig.AutoBlockEnabled) end end)
+    pcall(function() if m1AfterBlockToggle then m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled) end end)
+    pcall(function() if closeRangeSlider then closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange) end end)
+    pcall(function() if longRangeSlider then longRangeSlider:SetValue(defaultConfig.AutoBlockLongRange) end end)
+    pcall(function() if m1RangeSlider then m1RangeSlider:SetValue(defaultConfig.M1AfterBlockRange) end end)
+    pcall(function() if camlockToggle then camlockToggle:SetValue(defaultConfig.CamlockEnabled) end end)
+    pcall(function() if mobileCamlockToggle then mobileCamlockToggle:SetValue(defaultConfig.MobileCamlockButton) end end)
+    pcall(function() if counterESPToggle then counterESPToggle:SetValue(defaultConfig.CounterESPEnabled) end end)
+    pcall(function() if deathCounterESPToggle then deathCounterESPToggle:SetValue(defaultConfig.DeathCounterESPEnabled) end end)
+    pcall(function() if pingESPToggle then pingESPToggle:SetValue(defaultConfig.PingESPEnabled) end end)
+    pcall(function() if blockESPToggle then blockESPToggle:SetValue(defaultConfig.BlockESPEnabled) end end)
+    pcall(function() if highPingToggle then highPingToggle:SetValue(defaultConfig.HighPingWarningEnabled) end end)
+    pcall(function() if autoToxicToggle then autoToxicToggle:SetValue(defaultConfig.AutoToxicEnabled) end end)
+    pcall(function() if toxicMessageInput then toxicMessageInput:SetValue(defaultConfig.AutoToxicMessage) end end)
+    pcall(function() if repeatSlider then repeatSlider:SetValue(defaultConfig.AutoToxicRepeat) end end)
+    pcall(function() if cooldownSlider then cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown) end end)
+    pcall(function() if keybindInput then keybindInput:SetValue(defaultConfig.CamlockKeybind.Key) end end)
+    pcall(function() if blockAimToggle then blockAimToggle:SetValue(defaultConfig.BlockAimEnabled) end end)
+    pcall(function() if blockAimSmoothness then blockAimSmoothness:SetValue(defaultConfig.BlockAimSmoothness) end end)
+    
+    pcall(function() if targetInfoToggle then targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled) end end)
+    pcall(function() if camlockNotificationsToggle then camlockNotificationsToggle:SetValue(defaultConfig.CamlockNotificationsEnabled) end end)
+    pcall(function() if predictionSlider then predictionSlider:SetValue(defaultConfig.CamlockPrediction) end end)
+    
+    -- Update system states
+    if AutoBlock.Enabled then
+        AutoBlock:Stop()
+        if defaultConfig.AutoBlockEnabled then
+            AutoBlock:Start()
+        end
+    end
+    
+    if Camlock.Enabled then
+        Camlock:Stop()
+    end
+    
+    if CounterESP.Enabled then
+        CounterESP:Stop()
+        if defaultConfig.CounterESPEnabled then
+            CounterESP:Start()
+        end
+    end
+    
+    if PingESP.Enabled then
+        PingESP:Stop()
+        if defaultConfig.PingESPEnabled then
+            PingESP:Start()
+        end
+    end
+    
+    if BlockESP.Enabled then
+        BlockESP:Stop()
+        if defaultConfig.BlockESPEnabled then
+            BlockESP:Start()
+        end
+    end
+    
+    if HighPingWarning.Enabled then
+        HighPingWarning:Stop()
+        if defaultConfig.HighPingWarningEnabled then
+            HighPingWarning:Start()
+        end
+    end
+    
+    if DeathCounterESP.Enabled then
+        DeathCounterESP:Stop()
+        if defaultConfig.DeathCounterESPEnabled then
+            DeathCounterESP:Start()
+        end
+    end
+    
+    if AutoToxic.Enabled then
+        AutoToxic:Stop()
+        if defaultConfig.AutoToxicEnabled then
+            AutoToxic:Start()
+        end
+    end
+    
+    if Camlock.MobileButton and not defaultConfig.MobileCamlockButton then
+        Camlock:RemoveMobileButton()
+    elseif not Camlock.MobileButton and defaultConfig.MobileCamlockButton then
+        Camlock:CreateMobileButton()
+    end
+    
+    Camlock:SetupKeybind()
+    
+    WindUI:Notify({
+        Title = "Success",
+        Content = "Default settings loaded!",
+        Duration = 3,
+        Icon = "check"
     })
+end
     
     -- ==================== OTHERS TAB CONTENT ====================
     OthersTab:Section({
