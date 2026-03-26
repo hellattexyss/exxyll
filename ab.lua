@@ -248,15 +248,7 @@ function ConfigManager:Set(key, value)
         end
     })
     
-    Window:SideBarButton({
-        Title = "Load Defaults",
-        Icon = "refresh-cw",
-        Variant = "Secondary",
-        Callback = function()
-            -- Trigger the load defaults function (will be defined later)
-            loadDefaults()
-        end
-    })
+   
     
     Window:SideBarDivider({})
     
@@ -974,6 +966,16 @@ local function loadDefaults()
         Icon = "check"
     })
     end
+
+    Window:SideBarButton({
+        Title = "Load Defaults",
+        Icon = "refresh-cw",
+        Variant = "Secondary",
+        Callback = function()
+        -- Trigger the load defaults function (will be defined later)
+            loadDefaults()
+        end
+    })
     
     -- ==================== OTHERS TAB CONTENT ====================
     OthersTab:Section({
