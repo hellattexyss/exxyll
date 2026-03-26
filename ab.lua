@@ -1,114 +1,116 @@
 if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceId == 131048399685555 then
     local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/orialdev/WindUI-Boreal/main/WindUI%20Boreal"))()
 
-    local ConfigManager = {}
-    local configFile = "WaspireCombatUI.json"
-    
-    local defaultConfig = {
-        AutoBlockEnabled = false,
-        AutoBlockCloseRange = 14,
-        AutoBlockLongRange = 35,
-        M1AfterBlockRange = 10,
-        BlockAimEnabled = false,
-        BlockAimSmoothness = 0.5,
-        CounterESPEnabled = false,
-        CounterRange = 20,
-        M1AfterBlockEnabled = false,
-        CamlockEnabled = false,
-        CamlockKeybind = {
-            Key = "Q",
-            Type = "Keyboard"
-        },      
-        CamlockTargetInfoEnabled = true,
-        CamlockNotificationsEnabled = true,
-        CamlockPrediction = 0.5,
-        MobileCamlockButton = false,
-        DeathCounterESPEnabled = false,
-        PingESPEnabled = false,
-        BlockESPEnabled = false,
-        HighPingWarningEnabled = false,
-        AutoToxicEnabled = false,
-        AutoToxicMessage = "ez",
-        AutoToxicRepeat = 1,
-        AutoToxicCooldown = 1,
-        CloseRangeMoves = {
-            "rbxassetid://16552234590", "rbxassetid://17889290569", "rbxassetid://17889461810", "rbxassetid://17889458563",
-            "rbxassetid://17889471098", "rbxassetid://16515448089", "rbxassetid://16515520431", "rbxassetid://16515503507",
-            "rbxassetid://15162694192", "rbxassetid://15240176873", "rbxassetid://15240216931", "rbxassetid://15259161390",
-            "rbxassetid://14136436157", "rbxassetid://14001963401", "rbxassetid://13997092940", "rbxassetid://14004222985",
-            "rbxassetid://13378708199", "rbxassetid://13378751717", "rbxassetid://13390230973", "rbxassetid://13295936866",
-            "rbxassetid://13295919399", "rbxassetid://13296577783", "rbxassetid://13491635433", "rbxassetid://13294471966",
-            "rbxassetid://13532604085", "rbxassetid://13532600125", "rbxassetid://13532562418", "rbxassetid://10469643643",
-            "rbxassetid://10469630950", "rbxassetid://10469639222", "rbxassetid://10469493270", "rbxassetid://10479335397",
-            "rbxassetid://17325537719", "rbxassetid://17325522388", "rbxassetid://17325510002", "rbxassetid://17325513870",
-            "rbxassetid://13380255751", "rbxassetid://17857788598", "rbxassetid://17799224866", "rbxassetid://10470104242",
-            "rbxassetid://10503381238", "rbxassetid://17889290569", "rbxassetid://17889471098", "rbxassetid://10479335397",
-            "rbxassetid://18464351556", "rbxassetid://17889461810", "rbxassetid://17889458563", "rbxassetid://10466974800",
-            "rbxassetid://10468665991", "rbxassetid://13380255751", "rbxassetid://12509505723", "rbxassetid://18179181663",
-            "rbxassetid://17857880283", "rbxassetid://12534735382", "rbxassetid://12296882427", "rbxassetid://12272894215",
-            "rbxassetid://15290930205", "rbxassetid://16431491215", "rbxassetid://16515850153", "rbxassetid://16139402582",
-            "rbxassetid://13362587853", "rbxassetid://16139108718", "rbxassetid://14046756619", "rbxassetid://134775406437626",
-            "rbxassetid://104895379416342", "rbxassetid://100059874351664", "rbxassetid://123005629431309",
-            "rbxassetid://98542310119798", "rbxassetid://77509627104305", "rbxassetid://113166426814229",
-            "rbxassetid://13376869471", "rbxassetid://15295895753", "rbxassetid://13370310513", "rbxassetid://125955606488863"
-        },
-        LongRangeMoves = {
-            "rbxassetid://10479335397", "rbxassetid://10468665991", "rbxassetid://12684185971", "rbxassetid://12509505723",
-            "rbxassetid://12684390285", "rbxassetid://17275150809", "rbxassetid://131820095363270", "rbxassetid://13362587853",
-            "rbxassetid://14046756619", "rbxassetid://15295895753", "rbxassetid://15290930205", "rbxassetid://13380255751"
-        },
-        CounterMoves = {
-            "rbxassetid://10469493270", "rbxassetid://10469630950", "rbxassetid://10469639222", "rbxassetid://10469643643",
-            "rbxassetid://13532562418", "rbxassetid://13532600125", "rbxassetid://13532604085", "rbxassetid://13294471966",
-            "rbxassetid://13491635433", "rbxassetid://13296577783", "rbxassetid://13295919399", "rbxassetid://13295936866",
-            "rbxassetid://13370310513", "rbxassetid://13390230973", "rbxassetid://13378751717", "rbxassetid://13378708199",
-            "rbxassetid://14004222985", "rbxassetid://13997092940", "rbxassetid://14001963401", "rbxassetid://14136436157",
-            "rbxassetid://15259161390", "rbxassetid://15240216931", "rbxassetid://15240176873", "rbxassetid://15162694192",
-            "rbxassetid://16515503507", "rbxassetid://16515520431", "rbxassetid://16515448089", "rbxassetid://16552234590",
-            "rbxassetid://17889458563", "rbxassetid://17889461810", "rbxassetid://17889471098", "rbxassetid://17889290569",
-            "rbxassetid://123005629431309", "rbxassetid://100059874351664", "rbxassetid://104895379416342", "rbxassetid://134775406437626"
-        },
-        WhiteCounterAnimation = "rbxassetid://15311685628",
-        BlueCounterAnimation = "rbxassetid://12351854556"
-    }
+    -- ==================== CONFIG MANAGER ====================
+local ConfigManager = {}
+local configFile = "WaspireCombatUI.json"
 
-    local currentConfig = {}   
-    
-    function ConfigManager:Load()
-        if isfile(configFile) then
-            local success, data = pcall(function()
-                return game:GetService("HttpService"):JSONDecode(readfile(configFile))
-            end)
-            if success then
-                for key, value in pairs(data) do
-                    currentConfig[key] = value
-                end
-                return true
-            end
-        end
-        for key, value in pairs(defaultConfig) do
-            currentConfig[key] = value
-        end
-        return false
-    end
+-- Define defaultConfig first (keep it as is)
+local defaultConfig = {
+    AutoBlockEnabled = false,
+    AutoBlockCloseRange = 14,
+    AutoBlockLongRange = 35,
+    M1AfterBlockRange = 10,
+    BlockAimEnabled = false,
+    BlockAimSmoothness = 0.5,
+    CounterESPEnabled = false,
+    CounterRange = 20,
+    M1AfterBlockEnabled = false,
+    CamlockEnabled = false,
+    CamlockKeybind = {
+        Key = "Q",
+        Type = "Keyboard"
+    },      
+    CamlockTargetInfoEnabled = true,
+    CamlockNotificationsEnabled = true,
+    CamlockPrediction = 0.5,
+    MobileCamlockButton = false,
+    DeathCounterESPEnabled = false,
+    PingESPEnabled = false,
+    BlockESPEnabled = false,
+    HighPingWarningEnabled = false,
+    AutoToxicEnabled = false,
+    AutoToxicMessage = "ez",
+    AutoToxicRepeat = 1,
+    AutoToxicCooldown = 1,
+    CloseRangeMoves = {
+        "rbxassetid://16552234590", "rbxassetid://17889290569", "rbxassetid://17889461810", "rbxassetid://17889458563",
+        "rbxassetid://17889471098", "rbxassetid://16515448089", "rbxassetid://16515520431", "rbxassetid://16515503507",
+        "rbxassetid://15162694192", "rbxassetid://15240176873", "rbxassetid://15240216931", "rbxassetid://15259161390",
+        "rbxassetid://14136436157", "rbxassetid://14001963401", "rbxassetid://13997092940", "rbxassetid://14004222985",
+        "rbxassetid://13378708199", "rbxassetid://13378751717", "rbxassetid://13390230973", "rbxassetid://13295936866",
+        "rbxassetid://13295919399", "rbxassetid://13296577783", "rbxassetid://13491635433", "rbxassetid://13294471966",
+        "rbxassetid://13532604085", "rbxassetid://13532600125", "rbxassetid://13532562418", "rbxassetid://10469643643",
+        "rbxassetid://10469630950", "rbxassetid://10469639222", "rbxassetid://10469493270", "rbxassetid://10479335397",
+        "rbxassetid://17325537719", "rbxassetid://17325522388", "rbxassetid://17325510002", "rbxassetid://17325513870",
+        "rbxassetid://13380255751", "rbxassetid://17857788598", "rbxassetid://17799224866", "rbxassetid://10470104242",
+        "rbxassetid://10503381238", "rbxassetid://17889290569", "rbxassetid://17889471098", "rbxassetid://10479335397",
+        "rbxassetid://18464351556", "rbxassetid://17889461810", "rbxassetid://17889458563", "rbxassetid://10466974800",
+        "rbxassetid://10468665991", "rbxassetid://13380255751", "rbxassetid://12509505723", "rbxassetid://18179181663",
+        "rbxassetid://17857880283", "rbxassetid://12534735382", "rbxassetid://12296882427", "rbxassetid://12272894215",
+        "rbxassetid://15290930205", "rbxassetid://16431491215", "rbxassetid://16515850153", "rbxassetid://16139402582",
+        "rbxassetid://13362587853", "rbxassetid://16139108718", "rbxassetid://14046756619", "rbxassetid://134775406437626",
+        "rbxassetid://104895379416342", "rbxassetid://100059874351664", "rbxassetid://123005629431309",
+        "rbxassetid://98542310119798", "rbxassetid://77509627104305", "rbxassetid://113166426814229",
+        "rbxassetid://13376869471", "rbxassetid://15295895753", "rbxassetid://13370310513", "rbxassetid://125955606488863"
+    },
+    LongRangeMoves = {
+        "rbxassetid://10479335397", "rbxassetid://10468665991", "rbxassetid://12684185971", "rbxassetid://12509505723",
+        "rbxassetid://12684390285", "rbxassetid://17275150809", "rbxassetid://131820095363270", "rbxassetid://13362587853",
+        "rbxassetid://14046756619", "rbxassetid://15295895753", "rbxassetid://15290930205", "rbxassetid://13380255751"
+    },
+    CounterMoves = {
+        "rbxassetid://10469493270", "rbxassetid://10469630950", "rbxassetid://10469639222", "rbxassetid://10469643643",
+        "rbxassetid://13532562418", "rbxassetid://13532600125", "rbxassetid://13532604085", "rbxassetid://13294471966",
+        "rbxassetid://13491635433", "rbxassetid://13296577783", "rbxassetid://13295919399", "rbxassetid://13295936866",
+        "rbxassetid://13370310513", "rbxassetid://13390230973", "rbxassetid://13378751717", "rbxassetid://13378708199",
+        "rbxassetid://14004222985", "rbxassetid://13997092940", "rbxassetid://14001963401", "rbxassetid://14136436157",
+        "rbxassetid://15259161390", "rbxassetid://15240216931", "rbxassetid://15240176873", "rbxassetid://15162694192",
+        "rbxassetid://16515503507", "rbxassetid://16515520431", "rbxassetid://16515448089", "rbxassetid://16552234590",
+        "rbxassetid://17889458563", "rbxassetid://17889461810", "rbxassetid://17889471098", "rbxassetid://17889290569",
+        "rbxassetid://123005629431309", "rbxassetid://100059874351664", "rbxassetid://104895379416342", "rbxassetid://134775406437626"
+    },
+    WhiteCounterAnimation = "rbxassetid://15311685628",
+    BlueCounterAnimation = "rbxassetid://12351854556"
+}
 
-    function ConfigManager:Save()
-        local success = pcall(function()
-            writefile(configFile, game:GetService("HttpService"):JSONEncode(currentConfig))
+local currentConfig = {}
+
+function ConfigManager:Load()
+    if isfile(configFile) then
+        local success, data = pcall(function()
+            return game:GetService("HttpService"):JSONDecode(readfile(configFile))
         end)
-        return success
-    end
-
-    function ConfigManager:Get(key)
-        if not currentConfig or not defaultConfig then
-            return nil
+        if success and type(data) == "table" then
+            for key, value in pairs(data) do
+                currentConfig[key] = value
+            end
+            return true
         end
-        return currentConfig[key] or defaultConfig[key]
     end
-
-    function ConfigManager:Set(key, value)
+    for key, value in pairs(defaultConfig) do
         currentConfig[key] = value
-        self:Save()
+    end
+    return false
+end
+
+function ConfigManager:Save()
+    local success = pcall(function()
+        writefile(configFile, game:GetService("HttpService"):JSONEncode(currentConfig))
+    end)
+    return success
+end
+
+function ConfigManager:Get(key)
+    if not currentConfig then
+        return defaultConfig[key]
+    end
+    return currentConfig[key] ~= nil and currentConfig[key] or defaultConfig[key]
+end
+
+function ConfigManager:Set(key, value)
+    currentConfig[key] = value
+    self:Save()
     end
 
     local keybindCheck = ConfigManager:Get("CamlockKeybind")
@@ -116,7 +118,6 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
         ConfigManager:Set("CamlockKeybind", {Key = "Q", Type = "Keyboard"})
     end
     
-    ConfigManager:Load()
     
     -- Create the main window with modern layout
     local Window = WindUI:CreateWindow({
@@ -866,111 +867,105 @@ local saveButton = SettingsTab:Button({
 })
 
 -- DEFINE THE FUNCTION FIRST (but we'll reference it later)
-local loadDefaultsFunction = nil
-
-local loadDefaultsButton = SettingsTab:Button({
-    Title = "Load Defaults",
-    Desc = "Reset all settings to default values",
-    Icon = "refresh-cw",
-    Callback = function()
-        if loadDefaultsFunction then
-            loadDefaultsFunction()
-        end
-    end
-})
-
--- Now define the actual function that will be set AFTER all UI elements are created
-loadDefaultsFunction = function()
+local function loadDefaults()
     for key, value in pairs(defaultConfig) do
         ConfigManager:Set(key, value)
     end
     
-    -- Use pcall to safely update each UI element
-    pcall(function() if autoBlockToggle then autoBlockToggle:SetValue(defaultConfig.AutoBlockEnabled) end end)
-    pcall(function() if m1AfterBlockToggle then m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled) end end)
-    pcall(function() if closeRangeSlider then closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange) end end)
-    pcall(function() if longRangeSlider then longRangeSlider:SetValue(defaultConfig.AutoBlockLongRange) end end)
-    pcall(function() if m1RangeSlider then m1RangeSlider:SetValue(defaultConfig.M1AfterBlockRange) end end)
-    pcall(function() if camlockToggle then camlockToggle:SetValue(defaultConfig.CamlockEnabled) end end)
-    pcall(function() if mobileCamlockToggle then mobileCamlockToggle:SetValue(defaultConfig.MobileCamlockButton) end end)
-    pcall(function() if counterESPToggle then counterESPToggle:SetValue(defaultConfig.CounterESPEnabled) end end)
-    pcall(function() if deathCounterESPToggle then deathCounterESPToggle:SetValue(defaultConfig.DeathCounterESPEnabled) end end)
-    pcall(function() if pingESPToggle then pingESPToggle:SetValue(defaultConfig.PingESPEnabled) end end)
-    pcall(function() if blockESPToggle then blockESPToggle:SetValue(defaultConfig.BlockESPEnabled) end end)
-    pcall(function() if highPingToggle then highPingToggle:SetValue(defaultConfig.HighPingWarningEnabled) end end)
-    pcall(function() if autoToxicToggle then autoToxicToggle:SetValue(defaultConfig.AutoToxicEnabled) end end)
-    pcall(function() if toxicMessageInput then toxicMessageInput:SetValue(defaultConfig.AutoToxicMessage) end end)
-    pcall(function() if repeatSlider then repeatSlider:SetValue(defaultConfig.AutoToxicRepeat) end end)
-    pcall(function() if cooldownSlider then cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown) end end)
-    pcall(function() if keybindInput then keybindInput:SetValue(defaultConfig.CamlockKeybind.Key) end end)
-    pcall(function() if blockAimToggle then blockAimToggle:SetValue(defaultConfig.BlockAimEnabled) end end)
-    pcall(function() if blockAimSmoothness then blockAimSmoothness:SetValue(defaultConfig.BlockAimSmoothness) end end)
+    -- Add nil checks for each UI element
+    if autoBlockToggle then autoBlockToggle:SetValue(defaultConfig.AutoBlockEnabled) end
+    if m1AfterBlockToggle then m1AfterBlockToggle:SetValue(defaultConfig.M1AfterBlockEnabled) end
+    if closeRangeSlider then closeRangeSlider:SetValue(defaultConfig.AutoBlockCloseRange) end
+    if longRangeSlider then longRangeSlider:SetValue(defaultConfig.AutoBlockLongRange) end
+    if m1RangeSlider then m1RangeSlider:SetValue(defaultConfig.M1AfterBlockRange) end
+    if camlockToggle then camlockToggle:SetValue(defaultConfig.CamlockEnabled) end
+    if mobileCamlockToggle then mobileCamlockToggle:SetValue(defaultConfig.MobileCamlockButton) end
+    if counterESPToggle then counterESPToggle:SetValue(defaultConfig.CounterESPEnabled) end
+    if deathCounterESPToggle then deathCounterESPToggle:SetValue(defaultConfig.DeathCounterESPEnabled) end
+    if pingESPToggle then pingESPToggle:SetValue(defaultConfig.PingESPEnabled) end
+    if blockESPToggle then blockESPToggle:SetValue(defaultConfig.BlockESPEnabled) end
+    if highPingToggle then highPingToggle:SetValue(defaultConfig.HighPingWarningEnabled) end
+    if autoToxicToggle then autoToxicToggle:SetValue(defaultConfig.AutoToxicEnabled) end
+    if toxicMessageInput then toxicMessageInput:SetValue(defaultConfig.AutoToxicMessage) end
+    if repeatSlider then repeatSlider:SetValue(defaultConfig.AutoToxicRepeat) end
+    if cooldownSlider then cooldownSlider:SetValue(defaultConfig.AutoToxicCooldown) end
+    if keybindInput then keybindInput:SetValue(defaultConfig.CamlockKeybind.Key) end
+    if blockAimToggle then blockAimToggle:SetValue(defaultConfig.BlockAimEnabled) end
+    if blockAimSmoothness then blockAimSmoothness:SetValue(defaultConfig.BlockAimSmoothness) end
     
-    pcall(function() if targetInfoToggle then targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled) end end)
-    pcall(function() if camlockNotificationsToggle then camlockNotificationsToggle:SetValue(defaultConfig.CamlockNotificationsEnabled) end end)
-    pcall(function() if predictionSlider then predictionSlider:SetValue(defaultConfig.CamlockPrediction) end end)
+    if targetInfoToggle then
+        targetInfoToggle:SetValue(defaultConfig.CamlockTargetInfoEnabled)
+    end
+    if camlockNotificationsToggle then
+        camlockNotificationsToggle:SetValue(defaultConfig.CamlockNotificationsEnabled)
+    end
+    if predictionSlider then
+        predictionSlider:SetValue(defaultConfig.CamlockPrediction)
+    end
     
-    -- Update system states
-    if AutoBlock.Enabled then
+    -- Add nil checks for system objects
+    if AutoBlock and AutoBlock.Enabled then
         AutoBlock:Stop()
         if defaultConfig.AutoBlockEnabled then
             AutoBlock:Start()
         end
     end
     
-    if Camlock.Enabled then
+    if Camlock and Camlock.Enabled then
         Camlock:Stop()
     end
     
-    if CounterESP.Enabled then
+    if CounterESP and CounterESP.Enabled then
         CounterESP:Stop()
         if defaultConfig.CounterESPEnabled then
             CounterESP:Start()
         end
     end
     
-    if PingESP.Enabled then
+    if PingESP and PingESP.Enabled then
         PingESP:Stop()
         if defaultConfig.PingESPEnabled then
             PingESP:Start()
         end
     end
     
-    if BlockESP.Enabled then
+    if BlockESP and BlockESP.Enabled then
         BlockESP:Stop()
         if defaultConfig.BlockESPEnabled then
             BlockESP:Start()
         end
     end
     
-    if HighPingWarning.Enabled then
+    if HighPingWarning and HighPingWarning.Enabled then
         HighPingWarning:Stop()
         if defaultConfig.HighPingWarningEnabled then
             HighPingWarning:Start()
         end
     end
     
-    if DeathCounterESP.Enabled then
+    if DeathCounterESP and DeathCounterESP.Enabled then
         DeathCounterESP:Stop()
         if defaultConfig.DeathCounterESPEnabled then
             DeathCounterESP:Start()
         end
     end
     
-    if AutoToxic.Enabled then
+    if AutoToxic and AutoToxic.Enabled then
         AutoToxic:Stop()
         if defaultConfig.AutoToxicEnabled then
             AutoToxic:Start()
         end
     end
     
-    if Camlock.MobileButton and not defaultConfig.MobileCamlockButton then
+    if Camlock and Camlock.MobileButton and not defaultConfig.MobileCamlockButton then
         Camlock:RemoveMobileButton()
-    elseif not Camlock.MobileButton and defaultConfig.MobileCamlockButton then
+    elseif Camlock and not Camlock.MobileButton and defaultConfig.MobileCamlockButton then
         Camlock:CreateMobileButton()
     end
     
-    Camlock:SetupKeybind()
+    if Camlock then
+        Camlock:SetupKeybind()
+    end
     
     WindUI:Notify({
         Title = "Success",
@@ -978,7 +973,7 @@ loadDefaultsFunction = function()
         Duration = 3,
         Icon = "check"
     })
-end
+    end
     
     -- ==================== OTHERS TAB CONTENT ====================
     OthersTab:Section({
@@ -2750,6 +2745,7 @@ end
     end
     
     -- ==================== INITIALIZATION ====================
+    ConfigManager:Load()
     Camlock:SetupKeybind()
     
     game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
