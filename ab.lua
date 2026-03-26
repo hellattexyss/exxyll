@@ -1,5 +1,122 @@
 if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceId == 131048399685555 then
     local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/orialdev/WindUI-Boreal/main/WindUI%20Boreal"))()
+
+    local ConfigManager = {}
+    local configFile = "WaspireCombatUI.json"
+    
+    local defaultConfig = {
+        AutoBlockEnabled = false,
+        AutoBlockCloseRange = 14,
+        AutoBlockLongRange = 35,
+        M1AfterBlockRange = 10,
+        BlockAimEnabled = false,
+        BlockAimSmoothness = 0.5,
+        CounterESPEnabled = false,
+        CounterRange = 20,
+        M1AfterBlockEnabled = false,
+        CamlockEnabled = false,
+        CamlockKeybind = {
+            Key = "Q",
+            Type = "Keyboard"
+        },      
+        CamlockTargetInfoEnabled = true,
+        CamlockNotificationsEnabled = true,
+        CamlockPrediction = 0.5,
+        MobileCamlockButton = false,
+        DeathCounterESPEnabled = false,
+        PingESPEnabled = false,
+        BlockESPEnabled = false,
+        HighPingWarningEnabled = false,
+        AutoToxicEnabled = false,
+        AutoToxicMessage = "ez",
+        AutoToxicRepeat = 1,
+        AutoToxicCooldown = 1,
+        CloseRangeMoves = {
+            "rbxassetid://16552234590", "rbxassetid://17889290569", "rbxassetid://17889461810", "rbxassetid://17889458563",
+            "rbxassetid://17889471098", "rbxassetid://16515448089", "rbxassetid://16515520431", "rbxassetid://16515503507",
+            "rbxassetid://15162694192", "rbxassetid://15240176873", "rbxassetid://15240216931", "rbxassetid://15259161390",
+            "rbxassetid://14136436157", "rbxassetid://14001963401", "rbxassetid://13997092940", "rbxassetid://14004222985",
+            "rbxassetid://13378708199", "rbxassetid://13378751717", "rbxassetid://13390230973", "rbxassetid://13295936866",
+            "rbxassetid://13295919399", "rbxassetid://13296577783", "rbxassetid://13491635433", "rbxassetid://13294471966",
+            "rbxassetid://13532604085", "rbxassetid://13532600125", "rbxassetid://13532562418", "rbxassetid://10469643643",
+            "rbxassetid://10469630950", "rbxassetid://10469639222", "rbxassetid://10469493270", "rbxassetid://10479335397",
+            "rbxassetid://17325537719", "rbxassetid://17325522388", "rbxassetid://17325510002", "rbxassetid://17325513870",
+            "rbxassetid://13380255751", "rbxassetid://17857788598", "rbxassetid://17799224866", "rbxassetid://10470104242",
+            "rbxassetid://10503381238", "rbxassetid://17889290569", "rbxassetid://17889471098", "rbxassetid://10479335397",
+            "rbxassetid://18464351556", "rbxassetid://17889461810", "rbxassetid://17889458563", "rbxassetid://10466974800",
+            "rbxassetid://10468665991", "rbxassetid://13380255751", "rbxassetid://12509505723", "rbxassetid://18179181663",
+            "rbxassetid://17857880283", "rbxassetid://12534735382", "rbxassetid://12296882427", "rbxassetid://12272894215",
+            "rbxassetid://15290930205", "rbxassetid://16431491215", "rbxassetid://16515850153", "rbxassetid://16139402582",
+            "rbxassetid://13362587853", "rbxassetid://16139108718", "rbxassetid://14046756619", "rbxassetid://134775406437626",
+            "rbxassetid://104895379416342", "rbxassetid://100059874351664", "rbxassetid://123005629431309",
+            "rbxassetid://98542310119798", "rbxassetid://77509627104305", "rbxassetid://113166426814229",
+            "rbxassetid://13376869471", "rbxassetid://15295895753", "rbxassetid://13370310513", "rbxassetid://125955606488863"
+        },
+        LongRangeMoves = {
+            "rbxassetid://10479335397", "rbxassetid://10468665991", "rbxassetid://12684185971", "rbxassetid://12509505723",
+            "rbxassetid://12684390285", "rbxassetid://17275150809", "rbxassetid://131820095363270", "rbxassetid://13362587853",
+            "rbxassetid://14046756619", "rbxassetid://15295895753", "rbxassetid://15290930205", "rbxassetid://13380255751"
+        },
+        CounterMoves = {
+            "rbxassetid://10469493270", "rbxassetid://10469630950", "rbxassetid://10469639222", "rbxassetid://10469643643",
+            "rbxassetid://13532562418", "rbxassetid://13532600125", "rbxassetid://13532604085", "rbxassetid://13294471966",
+            "rbxassetid://13491635433", "rbxassetid://13296577783", "rbxassetid://13295919399", "rbxassetid://13295936866",
+            "rbxassetid://13370310513", "rbxassetid://13390230973", "rbxassetid://13378751717", "rbxassetid://13378708199",
+            "rbxassetid://14004222985", "rbxassetid://13997092940", "rbxassetid://14001963401", "rbxassetid://14136436157",
+            "rbxassetid://15259161390", "rbxassetid://15240216931", "rbxassetid://15240176873", "rbxassetid://15162694192",
+            "rbxassetid://16515503507", "rbxassetid://16515520431", "rbxassetid://16515448089", "rbxassetid://16552234590",
+            "rbxassetid://17889458563", "rbxassetid://17889461810", "rbxassetid://17889471098", "rbxassetid://17889290569",
+            "rbxassetid://123005629431309", "rbxassetid://100059874351664", "rbxassetid://104895379416342", "rbxassetid://134775406437626"
+        },
+        WhiteCounterAnimation = "rbxassetid://15311685628",
+        BlueCounterAnimation = "rbxassetid://12351854556"
+    }
+
+    local currentConfig = {}   
+    
+    function ConfigManager:Load()
+        if isfile(configFile) then
+            local success, data = pcall(function()
+                return game:GetService("HttpService"):JSONDecode(readfile(configFile))
+            end)
+            if success then
+                for key, value in pairs(data) do
+                    currentConfig[key] = value
+                end
+                return true
+            end
+        end
+        for key, value in pairs(defaultConfig) do
+            currentConfig[key] = value
+        end
+        return false
+    end
+
+    function ConfigManager:Save()
+        local success = pcall(function()
+            writefile(configFile, game:GetService("HttpService"):JSONEncode(currentConfig))
+        end)
+        return success
+    end
+
+    function ConfigManager:Get(key)
+        if not currentConfig or not defaultConfig then
+            return nil
+        end
+        return currentConfig[key] or defaultConfig[key]
+    end
+
+    function ConfigManager:Set(key, value)
+        currentConfig[key] = value
+        self:Save()
+    end
+
+    local keybindCheck = ConfigManager:Get("CamlockKeybind")
+    if not keybindCheck or type(keybindCheck) ~= "table" then
+        ConfigManager:Set("CamlockKeybind", {Key = "Q", Type = "Keyboard"})
+    end
+    
+    ConfigManager:Load()
     
     -- Create the main window with modern layout
     local Window = WindUI:CreateWindow({
@@ -195,123 +312,7 @@ if game.PlaceId == 10449761463 or game.PlaceId == 130818724007978 or game.PlaceI
     -- Select default tab
     Window:SelectTab(HomeTab)
     
-    -- ==================== CONFIG MANAGER ====================
-    local ConfigManager = {}
-    local configFile = "WaspireCombatUI.json"
     
-    local defaultConfig = {
-        AutoBlockEnabled = false,
-        AutoBlockCloseRange = 14,
-        AutoBlockLongRange = 35,
-        M1AfterBlockRange = 10,
-        BlockAimEnabled = false,
-        BlockAimSmoothness = 0.5,
-        CounterESPEnabled = false,
-        CounterRange = 20,
-        M1AfterBlockEnabled = false,
-        CamlockEnabled = false,
-        CamlockKeybind = {
-            Key = "Q",
-            Type = "Keyboard"
-        },      
-        CamlockTargetInfoEnabled = true,
-        CamlockNotificationsEnabled = true,
-        CamlockPrediction = 0.5,
-        MobileCamlockButton = false,
-        DeathCounterESPEnabled = false,
-        PingESPEnabled = false,
-        BlockESPEnabled = false,
-        HighPingWarningEnabled = false,
-        AutoToxicEnabled = false,
-        AutoToxicMessage = "ez",
-        AutoToxicRepeat = 1,
-        AutoToxicCooldown = 1,
-        CloseRangeMoves = {
-            "rbxassetid://16552234590", "rbxassetid://17889290569", "rbxassetid://17889461810", "rbxassetid://17889458563",
-            "rbxassetid://17889471098", "rbxassetid://16515448089", "rbxassetid://16515520431", "rbxassetid://16515503507",
-            "rbxassetid://15162694192", "rbxassetid://15240176873", "rbxassetid://15240216931", "rbxassetid://15259161390",
-            "rbxassetid://14136436157", "rbxassetid://14001963401", "rbxassetid://13997092940", "rbxassetid://14004222985",
-            "rbxassetid://13378708199", "rbxassetid://13378751717", "rbxassetid://13390230973", "rbxassetid://13295936866",
-            "rbxassetid://13295919399", "rbxassetid://13296577783", "rbxassetid://13491635433", "rbxassetid://13294471966",
-            "rbxassetid://13532604085", "rbxassetid://13532600125", "rbxassetid://13532562418", "rbxassetid://10469643643",
-            "rbxassetid://10469630950", "rbxassetid://10469639222", "rbxassetid://10469493270", "rbxassetid://10479335397",
-            "rbxassetid://17325537719", "rbxassetid://17325522388", "rbxassetid://17325510002", "rbxassetid://17325513870",
-            "rbxassetid://13380255751", "rbxassetid://17857788598", "rbxassetid://17799224866", "rbxassetid://10470104242",
-            "rbxassetid://10503381238", "rbxassetid://17889290569", "rbxassetid://17889471098", "rbxassetid://10479335397",
-            "rbxassetid://18464351556", "rbxassetid://17889461810", "rbxassetid://17889458563", "rbxassetid://10466974800",
-            "rbxassetid://10468665991", "rbxassetid://13380255751", "rbxassetid://12509505723", "rbxassetid://18179181663",
-            "rbxassetid://17857880283", "rbxassetid://12534735382", "rbxassetid://12296882427", "rbxassetid://12272894215",
-            "rbxassetid://15290930205", "rbxassetid://16431491215", "rbxassetid://16515850153", "rbxassetid://16139402582",
-            "rbxassetid://13362587853", "rbxassetid://16139108718", "rbxassetid://14046756619", "rbxassetid://134775406437626",
-            "rbxassetid://104895379416342", "rbxassetid://100059874351664", "rbxassetid://123005629431309",
-            "rbxassetid://98542310119798", "rbxassetid://77509627104305", "rbxassetid://113166426814229",
-            "rbxassetid://13376869471", "rbxassetid://15295895753", "rbxassetid://13370310513", "rbxassetid://125955606488863"
-        },
-        LongRangeMoves = {
-            "rbxassetid://10479335397", "rbxassetid://10468665991", "rbxassetid://12684185971", "rbxassetid://12509505723",
-            "rbxassetid://12684390285", "rbxassetid://17275150809", "rbxassetid://131820095363270", "rbxassetid://13362587853",
-            "rbxassetid://14046756619", "rbxassetid://15295895753", "rbxassetid://15290930205", "rbxassetid://13380255751"
-        },
-        CounterMoves = {
-            "rbxassetid://10469493270", "rbxassetid://10469630950", "rbxassetid://10469639222", "rbxassetid://10469643643",
-            "rbxassetid://13532562418", "rbxassetid://13532600125", "rbxassetid://13532604085", "rbxassetid://13294471966",
-            "rbxassetid://13491635433", "rbxassetid://13296577783", "rbxassetid://13295919399", "rbxassetid://13295936866",
-            "rbxassetid://13370310513", "rbxassetid://13390230973", "rbxassetid://13378751717", "rbxassetid://13378708199",
-            "rbxassetid://14004222985", "rbxassetid://13997092940", "rbxassetid://14001963401", "rbxassetid://14136436157",
-            "rbxassetid://15259161390", "rbxassetid://15240216931", "rbxassetid://15240176873", "rbxassetid://15162694192",
-            "rbxassetid://16515503507", "rbxassetid://16515520431", "rbxassetid://16515448089", "rbxassetid://16552234590",
-            "rbxassetid://17889458563", "rbxassetid://17889461810", "rbxassetid://17889471098", "rbxassetid://17889290569",
-            "rbxassetid://123005629431309", "rbxassetid://100059874351664", "rbxassetid://104895379416342", "rbxassetid://134775406437626"
-        },
-        WhiteCounterAnimation = "rbxassetid://15311685628",
-        BlueCounterAnimation = "rbxassetid://12351854556"
-    }
-
-    local currentConfig = {}   
-    
-    function ConfigManager:Load()
-        if isfile(configFile) then
-            local success, data = pcall(function()
-                return game:GetService("HttpService"):JSONDecode(readfile(configFile))
-            end)
-            if success then
-                for key, value in pairs(data) do
-                    currentConfig[key] = value
-                end
-                return true
-            end
-        end
-        for key, value in pairs(defaultConfig) do
-            currentConfig[key] = value
-        end
-        return false
-    end
-
-    function ConfigManager:Save()
-        local success = pcall(function()
-            writefile(configFile, game:GetService("HttpService"):JSONEncode(currentConfig))
-        end)
-        return success
-    end
-
-    function ConfigManager:Get(key)
-        if not currentConfig or not defaultConfig then
-            return nil
-        end
-        return currentConfig[key] or defaultConfig[key]
-    end
-
-    function ConfigManager:Set(key, value)
-        currentConfig[key] = value
-        self:Save()
-    end
-
-    local keybindCheck = ConfigManager:Get("CamlockKeybind")
-    if not keybindCheck or type(keybindCheck) ~= "table" then
-        ConfigManager:Set("CamlockKeybind", {Key = "Q", Type = "Keyboard"})
-    end
-    
-    ConfigManager:Load()
     
     -- ==================== HOME TAB CONTENT ====================
     HomeTab:Paragraph({
